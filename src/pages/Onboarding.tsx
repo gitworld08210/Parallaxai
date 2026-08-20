@@ -12,8 +12,8 @@ import {
   where,
   limit,
   setDoc,
-  addDoc,
   updateDoc,
+  writeBatch,
   serverTimestamp,
 } from "firebase/firestore";
 import { toast } from "sonner";
@@ -155,16 +155,31 @@ const Onboarding = () => {
     if (!user) return;
     setSubmitting(true);
     try {
+      // Upload avatar outside the batch since it's an external operation
+      let avatarUrl: string | undefined;
+      if (avatarFile) {
+        try {
+          avatarUrl = await uploadToCloudinary(avatarFile);
+        } catch (e) {
+          console.error("Avatar upload failed:", e);
+          toast.error("Avatar upload failed, continuing without it");
+        }
+      }
+
+      // Use a batch write to ensure all Firestore operations succeed or fail atomically
+      const batch = writeBatch(db);
+
       // (a) Save selected interests to user_interests/{userId}
       const interestsMap: Record<string, number> = {};
       for (const topic of selectedTopics) {
         interestsMap[topic] = 1.0;
       }
-      await setDoc(doc(db, "user_interests", user.id), interestsMap);
+      batch.set(doc(db, "user_interests", user.id), interestsMap);
 
       // (b) Create follow documents for each followed creator
       for (const creatorId of followedCreators) {
-        await addDoc(collection(db, "follows"), {
+        const followRef = doc(collection(db, "follows"));
+        batch.set(followRef, {
           follower_id: user.id,
           following_id: creatorId,
           created_at: serverTimestamp(),
@@ -177,21 +192,18 @@ const Onboarding = () => {
         interests: selectedTopics,
       };
 
-      if (avatarFile) {
-        try {
-          const avatarUrl = await uploadToCloudinary(avatarFile);
-          profileUpdate.avatar_url = avatarUrl;
-        } catch (e) {
-          console.error("Avatar upload failed:", e);
-          toast.error("Avatar upload failed, continuing without it");
-        }
+      if (avatarUrl) {
+        profileUpdate.avatar_url = avatarUrl;
       }
 
       if (bio.trim()) {
         profileUpdate.bio = bio.trim();
       }
 
-      await updateDoc(doc(db, "profiles", user.id), profileUpdate);
+      batch.update(doc(db, "profiles", user.id), profileUpdate);
+
+      // Commit all writes atomically
+      await batch.commit();
       await refreshProfile();
 
       toast.success("Welcome to Parallax!");

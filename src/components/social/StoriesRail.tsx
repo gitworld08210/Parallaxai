@@ -16,6 +16,7 @@ type StoryRow = {
   media_url: string;
   media_type: string;
   created_at: string;
+  viewers?: string[];
   profile: { username: string; display_name: string; avatar_url: string | null } | null;
 };
 
@@ -81,6 +82,9 @@ export const StoriesRail = () => {
 
         {groups.filter((g) => g.user_id !== user?.id).map((g) => {
           const startIdx = flatStories.findIndex((s) => s.user_id === g.user_id);
+          const hasUnseen = g.stories.some(
+            (s) => !s.viewers || !s.viewers.includes(user?.id ?? "")
+          );
           return (
             <button
               key={g.user_id}
@@ -91,7 +95,7 @@ export const StoriesRail = () => {
                 avatarUrl={g.profile?.avatar_url || null}
                 username={g.profile?.username || ""}
                 displayName={g.profile?.display_name || ""}
-                hasUnseen={true}
+                hasUnseen={hasUnseen}
                 size="md"
               />
               <span className="text-[11px] truncate w-full text-center text-foreground">{g.profile?.username ?? "user"}</span>

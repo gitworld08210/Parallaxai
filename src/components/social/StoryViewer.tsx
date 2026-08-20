@@ -63,7 +63,7 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
     if (!user) return toast.error("Sign in");
     try {
       await updateDoc(doc(db, "stories", current.id), {
-        reactions: arrayUnion({ user_id: user.uid, emoji, created_at: new Date().toISOString() }),
+        reactions: arrayUnion({ user_id: user.uid, emoji }),
       });
       toast.success(`Reacted ${emoji}`);
     } catch (err: any) {

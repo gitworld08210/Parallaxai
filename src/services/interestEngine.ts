@@ -1,4 +1,4 @@
-import { collection, doc, getDoc, setDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc, getDoc, setDoc, addDoc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export type SignalType = "watch_time" | "like" | "save" | "share" | "profile_visit";
@@ -44,6 +44,7 @@ export async function trackEngagement(
 
 /**
  * Updates `user_interests/{userId}` document, incrementing a topic score by delta.
+ * Uses Firestore `increment()` for atomic updates, avoiding read-modify-write races.
  */
 export async function updateInterestVector(
   userId: string,
@@ -51,15 +52,7 @@ export async function updateInterestVector(
   delta: number
 ): Promise<void> {
   const docRef = doc(db, "user_interests", userId);
-  const snap = await getDoc(docRef);
-
-  if (snap.exists()) {
-    const data = snap.data() as InterestVector;
-    const current = data[topic] || 0;
-    await setDoc(docRef, { ...data, [topic]: current + delta }, { merge: true });
-  } else {
-    await setDoc(docRef, { [topic]: delta });
-  }
+  await setDoc(docRef, { [topic]: increment(delta) }, { merge: true });
 }
 
 /**
@@ -111,8 +104,9 @@ export function scorePosts<T extends ScoredPost>(
     const recencyFactor = 1 / (1 + hoursSincePost / 24);
 
     // engagement_velocity: (like_count + comment_count * 2) / max(1, hours_since_post)
+    // Floor of 1 ensures brand-new posts with no engagement still get ranked by topic match and recency
     const engagementVelocity =
-      (post.like_count + post.comment_count * 2) / Math.max(1, hoursSincePost);
+      Math.max(1, post.like_count + post.comment_count * 2) / Math.max(1, hoursSincePost);
 
     const score = contentTopicMatch * recencyFactor * engagementVelocity;
 
