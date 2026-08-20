@@ -14,6 +14,7 @@ import { Sparkles, ArrowLeft, Mail, Lock, User, Briefcase, ChevronRight } from "
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@/lib/zodResolver";
 import { loginSchema, signupSchema, type LoginFormData, type SignupFormData } from "@/lib/schemas";
+import { checkRateLimit, authLimiter } from "@/lib/rateLimit";
 
 
 type Tab = "signin" | "signup";
@@ -97,6 +98,7 @@ const Auth = () => {
   };
 
   const handleAuth = async (formData: LoginFormData | SignupFormData) => {
+    if (!checkRateLimit(authLimiter)) return;
     const email = formData.email;
     const password = formData.password;
     const name = "name" in formData ? formData.name : "";

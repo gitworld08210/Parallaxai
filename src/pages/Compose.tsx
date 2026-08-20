@@ -15,6 +15,7 @@ import { uploadToCloudinary } from "@/lib/cloudinary";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@/lib/zodResolver";
 import { composeSchema, type ComposeFormData } from "@/lib/schemas";
+import { checkRateLimit, postLimiter } from "@/lib/rateLimit";
 
 
 type CollabPick = { user_id: string; username: string; display_name: string; avatar_url: string | null };
@@ -150,6 +151,7 @@ const Compose = () => {
 
   const insertPost = async (status: "draft" | "scheduled" | "published", scheduled_for: string | null) => {
     if (!user) return;
+    if (!checkRateLimit(postLimiter)) return;
     // Trigger validation
     const isValid = await composeForm.trigger();
     if (!isValid) return;

@@ -12,6 +12,7 @@ import { useInfiniteFirestore } from "@/hooks/useInfiniteFirestore";
 import { useAuth } from "@/contexts/AuthProvider";
 import { fmt, gradientFor, initialsOf } from "@/lib/format";
 import { toast } from "sonner";
+import { checkRateLimit, followLimiter } from "@/lib/rateLimit";
 import { cn } from "@/lib/utils";
 import { getProfileAvatarUrl } from "@/lib/cloudinary";
 import { setDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
@@ -101,6 +102,7 @@ const Discover = () => {
 
   const toggleFollow = async (target: string) => {
     if (!user) return toast.error("Sign in to follow");
+    if (!checkRateLimit(followLimiter)) return;
     const isF = following.has(target);
     const next = new Set(following);
     if (isF) {

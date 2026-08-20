@@ -13,6 +13,7 @@ import { AuraAvatar } from "@/components/vibe/AuraAvatar";
 import { VerificationBadge } from "@/components/vibe/VerificationBadge";
 import { fmt, gradientFor, initialsOf, timeAgo } from "@/lib/format";
 import { toast } from "sonner";
+import { checkRateLimit, likeLimiter } from "@/lib/rateLimit";
 import { ShareToDM } from "@/components/social/ShareToDM";
 import { SaveToCollectionSheet } from "@/components/social/SaveToCollectionSheet";
 import { ReportSheet } from "@/components/social/ReportSheet";
@@ -117,6 +118,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
 
   const toggleLike = async () => {
     if (!user) return toast.error("Sign in to like");
+    if (!checkRateLimit(likeLimiter)) return;
     const next = !liked;
     setLiked(next); setLikes((c) => c + (next ? 1 : -1));
     try {
