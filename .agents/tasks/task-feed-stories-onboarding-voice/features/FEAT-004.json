@@ -2,7 +2,7 @@
   "id": "FEAT-004",
   "type": "feat",
   "description": "Voice Notes in DMs - Fix the VoiceRecorder component to upload audio via Cloudinary instead of the broken Supabase storage path, and ensure proper integration in the Conversation page.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Modify `src/components/dm/VoiceMessage.tsx` VoiceRecorder component: (a) Remove the `import { supabase }` line at the top. (b) Import `uploadToCloudinary` from `@/lib/cloudinary`. (c) In the `send` function, replace the Supabase storage upload with: `const publicUrl = await uploadToCloudinary(blobRef.current);`. This will upload the audio blob to Cloudinary and return the secure URL. (d) Remove the hardcoded 'https://example.com/audio.webm' placeholder.",
     "Verify `src/pages/Conversation.tsx` integration is correct: The `sendVoice` function already handles the flow (receives mediaUrl from VoiceRecorder's onSend callback, creates a message doc in Firestore with media_url and media_type 'audio', updates conversation metadata). Confirm that the VoiceRecorder is shown when text input is empty (already done - conditional render at bottom of composer). No changes should be needed in Conversation.tsx.",
@@ -20,5 +20,5 @@
     "npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All acceptance criteria met. Supabase import removed, uploadToCloudinary integrated in send function, VoiceBubble test covers play/pause toggle and rendering. Build and all 10 tests pass."
 }
