@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "chore",
   "description": "Bundle optimization via Vite manual chunks to split the 1.5MB index chunk into manageable vendor bundles",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Modify vite.config.ts: add build.rollupOptions.output.manualChunks function that splits: vendor-react (react, react-dom, react-router-dom), vendor-ui (@radix-ui packages, framer-motion, class-variance-authority, clsx, tailwind-merge), vendor-firebase (firebase packages), vendor-charts (recharts), vendor-livekit (livekit-client, @livekit/components-react), vendor-supabase (@supabase/supabase-js)",
     "Set build.chunkSizeWarningLimit to 600 in vite.config.ts",
@@ -20,5 +20,5 @@
     "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Firebase was too large as a single chunk (732KB), so it was split into vendor-firebase (569KB for firestore+core), vendor-firebase-auth (128KB), and vendor-firebase-storage (35KB). All chunks are now under 600KB. Main index chunk reduced from 1503KB to 196KB (87% reduction). All 33 tests pass. Pre-existing act() warnings in tests are unrelated to this change."
 }
