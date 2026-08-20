@@ -32,7 +32,7 @@ const FinanceDepartment = () => {
     try {
       const q = query(
         collection(db, "coin_purchases"),
-        where("status", "==", "pending"),
+        where("status", "==", "submitted"),
         orderBy("created_at", "desc")
       );
       const snap = await getDocs(q);
@@ -112,6 +112,9 @@ const FinanceDepartment = () => {
       <TopBar title="Finance Department" subtitle="Coin Purchase Approvals" />
 
       <div className="flex-1 overflow-y-auto p-5 pb-24 space-y-4">
+        <p className="text-xs text-muted-foreground">
+          Showing requests where the user has submitted their UTR (status: &quot;submitted&quot;). These are ready for payment verification and approval.
+        </p>
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -119,7 +122,7 @@ const FinanceDepartment = () => {
         ) : requests.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
             <Coins className="h-10 w-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No pending purchase requests</p>
+            <p className="text-sm text-muted-foreground">No submitted purchase requests awaiting review</p>
           </div>
         ) : (
           requests.map((req, idx) => (

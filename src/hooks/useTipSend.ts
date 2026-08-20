@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { doc, getDoc, increment, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, runTransaction, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface TipParams {
@@ -18,33 +18,44 @@ export function useTipSend() {
     setLoading(true);
     setError(null);
 
+    // Self-transfer guard
+    if (senderId === recipientId) {
+      setError("Cannot tip yourself");
+      setLoading(false);
+      return false;
+    }
+
     try {
-      // 1. Check sender balance
+      // TODO: Move wallet transfer logic to a Firebase Cloud Function for production security.
+      // Client-side runTransaction prevents double-spend but cannot enforce authorization on the recipient credit.
       const senderWalletRef = doc(db, "wallets", senderId);
-      const senderSnap = await getDoc(senderWalletRef);
-      const currentBalance = senderSnap.exists() ? (senderSnap.data().total || 0) : 0;
-
-      if (currentBalance < amount) {
-        setError("Insufficient balance");
-        setLoading(false);
-        return false;
-      }
-
-      // 2. Deduct from sender
-      await updateDoc(senderWalletRef, { total: increment(-amount) });
-
-      // 3. Credit to recipient
       const recipientWalletRef = doc(db, "wallets", recipientId);
-      const recipientSnap = await getDoc(recipientWalletRef);
-      if (recipientSnap.exists()) {
-        await updateDoc(recipientWalletRef, { total: increment(amount) });
-      } else {
-        // If recipient wallet doesn't exist, create it
-        const { setDoc } = await import("firebase/firestore");
-        await setDoc(recipientWalletRef, { total: amount });
-      }
 
-      // 4. Log transaction
+      await runTransaction(db, async (transaction) => {
+        // 1. Read sender wallet inside transaction for atomicity
+        const senderSnap = await transaction.get(senderWalletRef);
+        const currentBalance = senderSnap.exists() ? (senderSnap.data().total || 0) : 0;
+
+        if (currentBalance < amount) {
+          throw new Error("Insufficient balance");
+        }
+
+        // 2. Read recipient wallet
+        const recipientSnap = await transaction.get(recipientWalletRef);
+
+        // 3. Deduct from sender
+        transaction.update(senderWalletRef, { total: currentBalance - amount });
+
+        // 4. Credit to recipient
+        if (recipientSnap.exists()) {
+          const recipientBalance = recipientSnap.data().total || 0;
+          transaction.update(recipientWalletRef, { total: recipientBalance + amount });
+        } else {
+          transaction.set(recipientWalletRef, { user_id: recipientId, total: amount });
+        }
+      });
+
+      // 5. Log transaction (outside runTransaction since it's a separate collection write)
       await addDoc(collection(db, "transactions"), {
         sender_id: senderId,
         recipient_id: recipientId,

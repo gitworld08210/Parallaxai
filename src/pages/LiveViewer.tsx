@@ -11,6 +11,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  runTransaction,
   serverTimestamp,
   updateDoc,
   where,
@@ -243,18 +244,29 @@ export default function LiveViewer() {
     if (!stream || !me) return;
     setBuying(true);
     try {
-      // Deduct from viewer wallet
-      const walletRef = doc(db, "wallets", me);
-      const walletSnap = await getDoc(walletRef);
-      const currentBalance = walletSnap.exists() ? (walletSnap.data().total || 0) : 0;
-      if (currentBalance < stream.ticket_price_coins) {
-        toast.error("Not enough coins - top up in Wallet");
-        return;
-      }
-      await updateDoc(walletRef, { total: increment(-stream.ticket_price_coins) });
-      // Credit host wallet
-      await updateDoc(doc(db, "wallets", stream.host_id), { total: increment(stream.ticket_price_coins) });
-      // Create ticket record
+      // TODO: Move wallet transfer logic to a Firebase Cloud Function for production security.
+      // Client-side runTransaction prevents double-spend but cannot enforce authorization on the recipient credit.
+      const viewerWalletRef = doc(db, "wallets", me);
+      const hostWalletRef = doc(db, "wallets", stream.host_id);
+
+      await runTransaction(db, async (transaction) => {
+        const viewerSnap = await transaction.get(viewerWalletRef);
+        const currentBalance = viewerSnap.exists() ? (viewerSnap.data().total || 0) : 0;
+        if (currentBalance < stream.ticket_price_coins) {
+          throw new Error("Insufficient coins - top up in Wallet");
+        }
+        const hostSnap = await transaction.get(hostWalletRef);
+        const hostBalance = hostSnap.exists() ? (hostSnap.data().total || 0) : 0;
+
+        transaction.update(viewerWalletRef, { total: currentBalance - stream.ticket_price_coins });
+        if (hostSnap.exists()) {
+          transaction.update(hostWalletRef, { total: hostBalance + stream.ticket_price_coins });
+        } else {
+          transaction.set(hostWalletRef, { user_id: stream.host_id, total: stream.ticket_price_coins });
+        }
+      });
+
+      // Create ticket record (outside transaction - non-critical)
       await addDoc(collection(db, "live_tickets"), {
         stream_id: stream.id,
         user_id: me,
@@ -272,20 +284,36 @@ export default function LiveViewer() {
 
   const sendGift = async (g: GiftDef) => {
     if (!stream || !me) return;
+    // Self-gift guard: prevent host from gifting themselves
+    if (me === stream.host_id) {
+      toast.error("Cannot gift yourself");
+      return;
+    }
     setGiftSheet(false);
     try {
-      // Deduct from viewer wallet
+      // TODO: Move wallet transfer logic to a Firebase Cloud Function for production security.
+      // Client-side runTransaction prevents double-spend but cannot enforce authorization on the recipient credit.
       const viewerWalletRef = doc(db, "wallets", me);
-      const viewerSnap = await getDoc(viewerWalletRef);
-      const currentBalance = viewerSnap.exists() ? (viewerSnap.data().total || 0) : 0;
-      if (currentBalance < g.cost_coins) {
-        toast.error("Not enough coins - top up in Wallet");
-        return;
-      }
-      await updateDoc(viewerWalletRef, { total: increment(-g.cost_coins) });
-      // Credit host wallet
-      await updateDoc(doc(db, "wallets", stream.host_id), { total: increment(g.cost_coins) });
-      // Record the gift event
+      const hostWalletRef = doc(db, "wallets", stream.host_id);
+
+      await runTransaction(db, async (transaction) => {
+        const viewerSnap = await transaction.get(viewerWalletRef);
+        const currentBalance = viewerSnap.exists() ? (viewerSnap.data().total || 0) : 0;
+        if (currentBalance < g.cost_coins) {
+          throw new Error("Insufficient coins - top up in Wallet");
+        }
+        const hostSnap = await transaction.get(hostWalletRef);
+        const hostBalance = hostSnap.exists() ? (hostSnap.data().total || 0) : 0;
+
+        transaction.update(viewerWalletRef, { total: currentBalance - g.cost_coins });
+        if (hostSnap.exists()) {
+          transaction.update(hostWalletRef, { total: hostBalance + g.cost_coins });
+        } else {
+          transaction.set(hostWalletRef, { user_id: stream.host_id, total: g.cost_coins });
+        }
+      });
+
+      // Record the gift event (outside transaction - non-critical)
       await addDoc(collection(db, "live_gifts"), {
         stream_id: stream.id,
         gift_id: g.id,

@@ -83,6 +83,7 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
     try {
       await updateDoc(doc(db, "coin_purchases", topupId), {
         utr_number: cleaned,
+        status: "submitted",
       });
       setStep("done");
     } catch (e: any) {
