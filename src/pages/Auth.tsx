@@ -11,7 +11,7 @@ import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
 import { Sparkles, ArrowLeft, Mail, Lock, User, Briefcase, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+
 
 type Tab = "signin" | "signup";
 type AccountKind = "personal" | "organization";
@@ -122,18 +122,6 @@ const Auth = () => {
           verified: false,
         }, username);
 
-        try {
-          await supabase.from("profiles").insert({
-            id: res.user.uid,
-            user_id: res.user.uid,
-            username,
-            display_name: displayName,
-            account_type: kind
-          } as any);
-        } catch (e) {
-          console.warn("Supabase sync failed", e);
-        }
-
         toast.success("Account created");
         await routeForUser(res.user.uid);
       }
@@ -180,19 +168,6 @@ const Auth = () => {
           }, { merge: true });
         } catch (idxErr) {
           console.warn("Username index skipped:", idxErr);
-        }
-
-        try {
-          await supabase.from("profiles").insert({
-            id: uid,
-            user_id: uid,
-            username: finalUsername,
-            display_name: name,
-            account_type: kind,
-            avatar_url: res.user.photoURL
-          } as any);
-        } catch (e) {
-          console.warn("Supabase sync failed", e);
         }
       }
       toast.success("Signed in with Google");
