@@ -1,4 +1,3 @@
-import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Calendar, FileText, ChevronLeft, Trash2, Send } from "lucide-react";
@@ -6,6 +5,8 @@ import { Calendar, FileText, ChevronLeft, Trash2, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/format";
+import { collection, query, where, orderBy, getDocs, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 type Draft = {
   id: string;
@@ -27,26 +28,86 @@ const Drafts = () => {
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase.from("posts").select("id, content, media_url, media_type, status, scheduled_for, created_at").eq("user_id", user.uid).in("status", ["draft", "scheduled"]).order("created_at", { ascending: false });
-    setItems((data ?? []) as Draft[]);
-    setLoading(false);
+    try {
+      // Query drafts
+      const draftsQuery = query(
+        collection(db, "posts"),
+        where("user_id", "==", user.id),
+        where("status", "==", "draft"),
+        orderBy("created_at", "desc")
+      );
+      // Query scheduled
+      const scheduledQuery = query(
+        collection(db, "posts"),
+        where("user_id", "==", user.id),
+        where("status", "==", "scheduled"),
+        orderBy("created_at", "desc")
+      );
+
+      const [draftsSnap, scheduledSnap] = await Promise.all([
+        getDocs(draftsQuery),
+        getDocs(scheduledQuery),
+      ]);
+
+      const results: Draft[] = [];
+
+      draftsSnap.docs.forEach((d) => {
+        const data = d.data();
+        results.push({
+          id: d.id,
+          content: data.content || "",
+          media_url: data.media_url || null,
+          media_type: data.media_type || null,
+          status: "draft",
+          scheduled_for: data.scheduled_for || null,
+          created_at: data.created_at?.toDate?.() ? data.created_at.toDate().toISOString() : data.created_at || new Date().toISOString(),
+        });
+      });
+
+      scheduledSnap.docs.forEach((d) => {
+        const data = d.data();
+        results.push({
+          id: d.id,
+          content: data.content || "",
+          media_url: data.media_url || null,
+          media_type: data.media_type || null,
+          status: "scheduled",
+          scheduled_for: data.scheduled_for || null,
+          created_at: data.created_at?.toDate?.() ? data.created_at.toDate().toISOString() : data.created_at || new Date().toISOString(),
+        });
+      });
+
+      // Sort by created_at descending
+      results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      setItems(results);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to load drafts");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.uid]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user?.id]);
 
   const publishNow = async (id: string) => {
-    const { error } = await supabase.from("posts").update({ status: "published" as any, scheduled_for: null }).eq("id", id);
-    if (error) return toast.error(error.message);
-
-    toast.success("Published");
-    load();
+    try {
+      await updateDoc(doc(db, "posts", id), { status: "published", scheduled_for: null });
+      toast.success("Published");
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to publish");
+    }
   };
 
   const remove = async (id: string) => {
     if (!confirm("Delete this draft?")) return;
-    const { error } = await supabase.from("posts").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    setItems((arr) => arr.filter((i) => i.id !== id));
+    try {
+      await deleteDoc(doc(db, "posts", id));
+      setItems((arr) => arr.filter((i) => i.id !== id));
+    } catch (e: any) {
+      toast.error(e.message || "Failed to delete");
+    }
   };
 
   const visible = items.filter((i) => i.status === tab);

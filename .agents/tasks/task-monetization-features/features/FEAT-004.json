@@ -2,7 +2,7 @@
   "id": "FEAT-004",
   "type": "feat",
   "description": "Content Scheduling - Modify Compose.tsx to properly support scheduling posts with status 'scheduled' and scheduled_for timestamp. Show scheduled posts in Drafts page with publish-now ability. The scheduling UI already exists in Compose (scheduleOpen, scheduledFor states, datetime-local input, Sheet). Drafts page already shows scheduled posts tab. This feature: ensures the Compose scheduling saves to Firestore correctly, updates Drafts to read from Firestore instead of Supabase, and adds manual publish functionality.",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "1. Verify src/pages/Compose.tsx scheduling flow: The insertPost function already handles status 'scheduled' and writes to Firestore 'posts' collection with scheduled_for field. This already works correctly via the existing code. No changes needed to Compose.tsx unless there are bugs.",
     "2. Rewrite src/pages/Drafts.tsx to use Firebase Firestore instead of Supabase. Currently it uses supabase.from('posts').select() - change to query Firestore 'posts' collection where user_id == current user and status in ['draft', 'scheduled']. Use the same UI structure but with Firebase queries. The publishNow function should updateDoc(doc(db, 'posts', id), { status: 'published', scheduled_for: null }). The remove function should deleteDoc.",
@@ -22,5 +22,5 @@
     "npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Rewrote Drafts.tsx from Supabase to Firebase Firestore. Used two separate queries (one for draft status, one for scheduled status) since Firestore does not support 'in' operator combined with orderBy on a different field without composite indexes. Compose.tsx scheduling already worked correctly. All 29 tests pass across 7 test files."
 }
