@@ -2,7 +2,7 @@
   "id": "FEAT-004",
   "type": "feat",
   "description": "Form validation with Zod schemas and react-hook-form integration for Auth, Compose, and EditProfile pages",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create src/lib/schemas.ts with Zod schemas: signupSchema (email: valid email, password: min 6 chars, name: min 1 char required), loginSchema (email: valid email, password: min 1 char), profileSchema (display_name: min 1 max 50, username: min 1 max 24 lowercase alphanumeric plus _ and ., bio: max 200 optional), composeSchema (content: max 2200 chars, must have content or media - use refine), reportSchema (reason: min 1 char required). Use zod v4 syntax since package.json has zod ^4.4.3.",
     "Update src/pages/Auth.tsx - integrate react-hook-form with zodResolver. Use useForm with loginSchema or signupSchema depending on tab. Replace manual validation with form.handleSubmit(). Show inline error messages below each input field using form.formState.errors with red text styling.",
@@ -24,5 +24,5 @@
     "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Zod v4 has a different error structure than v3 - ZodError has .issues instead of .errors, and the official @hookform/resolvers zodResolver (v3.10.0) is incompatible with zod v4. Created a custom zodResolver at src/lib/zodResolver.ts that works with zod v4's .issues API. All 33 tests pass, build succeeds."
 }
