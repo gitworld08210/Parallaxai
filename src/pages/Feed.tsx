@@ -20,6 +20,7 @@ import { useInfiniteFirestore } from "@/hooks/useInfiniteFirestore";
 import { useAuth } from "@/contexts/AuthProvider";
 import { gradientFor, initialsOf } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { getProfileAvatarUrl } from "@/lib/cloudinary";
 
 const Feed = () => {
   const { user, profile } = useAuth();
@@ -153,7 +154,7 @@ const Feed = () => {
               trigger={
                 <button className="h-8 w-8 rounded-full overflow-hidden ring-1 ring-white/10">
                   {profile?.avatar_url ? (
-                    <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                    <img src={getProfileAvatarUrl(profile.avatar_url)} alt="" className="h-full w-full object-cover" />
                   ) : (
                     <AuraAvatar gradient={gradientFor(profile?.username)} initials={initialsOf(displayName)} />
                   )}

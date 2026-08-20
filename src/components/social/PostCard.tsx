@@ -20,6 +20,7 @@ import { FounderBadge } from "@/components/founders/FounderBadge";
 import { GenesisMark } from "@/components/founders/GenesisMark";
 import { DoubleTapHeart } from "@/components/social/DoubleTapHeart";
 import { cn } from "@/lib/utils";
+import { getFeedImageUrl, getProfileAvatarUrl } from "@/lib/cloudinary";
 
 export type FeedPost = {
   id: string;
@@ -193,7 +194,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
         <Link to={`/u/${handle}`} className="shrink-0">
           {post.profile?.avatar_url ? (
             <img
-              src={post.profile.avatar_url}
+              src={getProfileAvatarUrl(post.profile.avatar_url)}
               alt={name}
               className="h-10 w-10 rounded-full object-cover ring-1 ring-border"
             />
@@ -309,7 +310,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
               {post.media_type === "video" ? (
                 <video src={post.media_url} controls playsInline className="w-full max-h-[560px] object-cover" />
               ) : (
-                <img src={post.media_url} alt="" className="w-full max-h-[560px] object-cover" draggable={false} loading="lazy" />
+                <img src={getFeedImageUrl(post.media_url)} alt="" className="w-full max-h-[560px] object-cover" draggable={false} loading="lazy" />
               )}
               <DoubleTapHeart trigger={burst} />
             </div>

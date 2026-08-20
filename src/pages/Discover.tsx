@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { fmt, gradientFor, initialsOf } from "@/lib/format";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { getProfileAvatarUrl } from "@/lib/cloudinary";
 import { setDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
 
 type Profile = {
@@ -336,7 +337,7 @@ const CreatorChipRail = ({
       >
         <Link to={`/u/${p.username}`} className="mb-2">
           {p.avatar_url ? (
-            <img src={p.avatar_url} alt="" className="h-14 w-14 rounded-full object-cover" />
+            <img src={getProfileAvatarUrl(p.avatar_url)} alt="" className="h-14 w-14 rounded-full object-cover" />
           ) : (
             <AuraAvatar gradient={gradientFor(p.username)} size="md" initials={initialsOf(p.display_name || p.username)} />
           )}
@@ -366,7 +367,7 @@ const CreatorRow = ({
   <div className="flex items-center gap-3 py-3">
     <Link to={`/u/${p.username}`} className="shrink-0">
       {p.avatar_url ? (
-        <img src={p.avatar_url} className="h-12 w-12 rounded-full object-cover" alt="" />
+        <img src={getProfileAvatarUrl(p.avatar_url)} className="h-12 w-12 rounded-full object-cover" alt="" />
       ) : (
         <AuraAvatar gradient={gradientFor(p.username)} size="md" initials={initialsOf(p.display_name || p.username)} />
       )}
