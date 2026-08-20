@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Send, Plus, Volume2, VolumeX, Pause, Camera, Search, Music2, Bookmark, MoreHorizontal, AlertCircle } from "lucide-react";
+import { Heart, MessageCircle, Send, Plus, Volume2, VolumeX, Pause, Camera, Search, Music2, Bookmark, MoreHorizontal, AlertCircle, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -13,6 +13,7 @@ import { WhyThisAd } from "@/features/content-understanding/components/WhyThisAd
 import { useContentContext } from "@/features/content-understanding/hooks/useContentContext";
 import { CommentSheet } from "@/components/social/CommentSheet";
 import { ShareToDM } from "@/components/social/ShareToDM";
+import { TipSheet } from "@/components/social/TipSheet";
 import { fmt } from "@/lib/format";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,8 @@ const Reels = () => {
   const [tab, setTab] = useState<FeedTab>("foryou");
   const [commentPost, setCommentPost] = useState<string | null>(null);
   const [sharePost, setSharePost] = useState<string | null>(null);
+  const [tipOpen, setTipOpen] = useState(false);
+  const [tipTarget, setTipTarget] = useState<{ userId: string; username: string; reelId: string } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [pausedIds, setPausedIds] = useState<Set<string>>(new Set());
   const [chromeDim, setChromeDim] = useState(false);
@@ -184,6 +187,7 @@ const Reels = () => {
             onToggleBookmark={toggleBookmark}
             onOpenComments={(id) => setCommentPost(id)}
             onShare={share}
+            onTip={(r) => { setTipTarget({ userId: r.user_id, username: r.profile?.username ?? "unknown", reelId: r.id }); setTipOpen(true); }}
             />
           </div>
         ))}
@@ -191,12 +195,21 @@ const Reels = () => {
 
       <CommentSheet postId={commentPost} open={!!commentPost} onOpenChange={(b) => !b && setCommentPost(null)} />
       <ShareToDM postId={sharePost} open={!!sharePost} onOpenChange={(b) => !b && setSharePost(null)} />
+      {tipTarget && (
+        <TipSheet
+          open={tipOpen}
+          onOpenChange={setTipOpen}
+          recipientId={tipTarget.userId}
+          recipientName={tipTarget.username}
+          postId={tipTarget.reelId}
+        />
+      )}
     </div>
   );
 };
 
 const ReelItem = ({
-  r, muted, chromeDim, isPaused, isActive, onTogglePause, onToggleMute, onToggleLike, onToggleBookmark, onOpenComments, onShare,
+  r, muted, chromeDim, isPaused, isActive, onTogglePause, onToggleMute, onToggleLike, onToggleBookmark, onOpenComments, onShare, onTip,
 }: {
   r: Reel;
   muted: boolean;
@@ -209,6 +222,7 @@ const ReelItem = ({
   onToggleBookmark: (r: Reel) => void;
   onOpenComments: (id: string) => void;
   onShare: (r: Reel) => void;
+  onTip: (r: Reel) => void;
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const lastTap = useRef(0);
@@ -388,6 +402,12 @@ const ReelItem = ({
           icon={<Send className="h-8 w-8 text-white" strokeWidth={1.75} />}
           label="Share"
           onClick={() => onShare(r)}
+        />
+
+        <ActionButton
+          icon={<Sparkles className="h-8 w-8 text-yellow-400" strokeWidth={1.75} />}
+          label="Tip"
+          onClick={() => onTip(r)}
         />
 
         {/* Spinning music disc */}
