@@ -28,13 +28,15 @@ export const AppShell = () => {
       setUnreadNotif(snap.size);
     });
 
-    const dmQuery = query(
-      collection(db, "conversations"),
-      where("participants", "array-contains", user.uid),
-      where(`unread_${user.uid}`, ">", 0)
+    // Use a dedicated unread_counts collection keyed by user uid
+    // Each document: { user_id, conversation_id, unread_count }
+    const unreadQuery = query(
+      collection(db, "unread_counts"),
+      where("user_id", "==", user.uid),
+      where("count", ">", 0)
     );
 
-    const unsubDm = onSnapshot(dmQuery, (snap) => {
+    const unsubDm = onSnapshot(unreadQuery, (snap) => {
       setUnreadDm(snap.size);
     });
 

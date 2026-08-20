@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-004",
+  "type": "fix",
+  "description": "Review fixes: Messages participant check, unread DM query restructuring, Firebase init hard failure, push_tokens rule, call_signals participant scoping",
+  "status": "in_progress",
+  "steps": [
+    "1. Fix messages Firestore rule: Add participants array check using resource.data.participants to scope reads to conversation participants only.",
+    "2. Fix unread DM query in AppShell.tsx: Replace dynamic field name `unread_${uid}` with a separate unread_counts collection query keyed by user uid.",
+    "3. Fix Firebase init: Replace console.warn with a throw to fail hard when required env vars are missing.",
+    "4. Add push_tokens Firestore rule: Add rule allowing authenticated users to read/write their own push_tokens subcollection.",
+    "5. Fix call_signals rule: Scope reads to from_user or to_user matching request.auth.uid."
+  ],
+  "acceptance_criteria": [
+    "Messages rule checks resource.data.participants for read access",
+    "AppShell unread DM query does not use dynamic field names",
+    "Firebase init throws an error when required env vars are missing",
+    "push_tokens collection has a Firestore security rule",
+    "call_signals reads are scoped to participants only",
+    "npm run build succeeds",
+    "npm run test passes"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": null
+}
