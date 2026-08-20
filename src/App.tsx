@@ -117,6 +117,7 @@ const AdminOSDashboard = lazy(() => import("./pages/admin-os/AdminOSDashboard"))
 const AppointmentsPanel = lazy(() => import("./pages/admin-os/AppointmentsPanel"));
 const RoutingOverview = lazy(() => import("./pages/ComingSoon"));
 const ApprovalsInbox = lazy(() => import("./pages/admin-os/ApprovalsInbox"));
+const FinanceDepartment = lazy(() => import("./pages/admin-os/FinanceDepartment"));
 const AdminOSModulePlaceholder = lazy(() => import("./pages/ComingSoon"));
 const AdminOSNoAccess = lazy(() => import("./pages/ComingSoon"));
 const AdminOSFirstLogin = lazy(() => import("./pages/ComingSoon"));
@@ -582,6 +583,7 @@ const App = () => (
                 <Route path="/admin-os/appointments" element={<AppointmentsPanel />} />
                 <Route path="/admin-os/approvals" element={<ApprovalsInbox />} />
                 <Route path="/admin-os/recruitment" element={<RecruitmentIndex />} />
+                <Route path="/admin-os/finance" element={<FinanceDepartment />} />
               </Route>
 
               <Route path="/admin-os/no-access" element={<AdminOSNoAccess />} />

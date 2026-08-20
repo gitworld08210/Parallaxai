@@ -46,7 +46,7 @@ export function useWalletLedger(limit = 40) {
       fetchCol("live_gifts", "sender_id"),
       fetchCol("post_unlocks"),
       fetchCol("creator_payout_requests"),
-      fetchCol("coin_topups"),
+      fetchCol("coin_purchases"),
     ]);
 
     const out: LedgerRow[] = [];

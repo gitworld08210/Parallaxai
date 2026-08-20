@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-005",
+  "type": "feat",
+  "description": "Live Streaming with Gifts - Make LiveHost.tsx and LiveViewer.tsx functional using Firebase Firestore for stream data, gifts, and wallet operations. Currently they use Supabase for live_streams, live_chat, live_gifts, and livekit-token. Rewrite to use Firebase for data storage while keeping LiveKit integration for actual streaming (token generation can remain as a placeholder since it needs a backend). Add gift overlay animation and top gifters list.",
+  "status": "pending",
+  "steps": [
+    "1. Rewrite src/pages/LiveHost.tsx to use Firebase Firestore: (a) Replace supabase.from('live_streams').insert() with addDoc(collection(db, 'live_streams'), {...}) using schema {host_id, title, status: 'live', livekit_room, access_type, ticket_price_coins, allow_gifts, viewer_count: 0, total_gifts: 0, started_at: serverTimestamp()}. (b) The livekit-token invoke can stay as a placeholder (log a warning that LiveKit server token is not available in dev). For dev/demo purposes, show the camera preview locally without actually connecting to LiveKit (skip the room.connect if no token available). (c) Replace supabase.channel realtime subscriptions with Firestore onSnapshot listeners on live_chat and live_gifts sub-collections or filtered queries. (d) Replace supabase.from('gifts').select for catalog with a Firestore 'gift_catalog' collection query. (e) On stream end, updateDoc to set status: 'ended'.",
+    "2. Rewrite src/pages/LiveViewer.tsx to use Firebase Firestore: (a) Load stream from Firestore 'live_streams' collection by ID. (b) Replace supabase-based access checks with Firestore reads. (c) Gift sending: When viewer sends a gift, deduct coins from wallets/{viewerId}.total (increment negative), credit wallets/{hostId}.total (increment positive), write to 'live_gifts/{id}' with {stream_id, gift_id, sender_id, coins_total, created_at}. Also increment live_streams/{id}.total_gifts. (d) Use onSnapshot for real-time chat and gifts instead of supabase.channel. (e) LiveKit connection can remain as placeholder (show stream status without actual video if no token).",
+    "3. Create src/components/live/GiftOverlay.tsx: Animated gift overlay using framer-motion. Shows gift emoji flying across the screen when gifts arrive. AnimatePresence with scale+translate+fade animations. Accepts an array of recent gift events and renders them with staggered animations.",
+    "4. Create src/components/live/TopGifters.tsx: Shows top 3-5 gifters during a live stream. Queries live_gifts for the stream, aggregates by sender_id, shows avatar/username and total coins gifted. Updates in real-time via onSnapshot.",
+    "5. Update src/pages/LiveList.tsx to read from Firebase Firestore 'live_streams' collection where status == 'live' instead of Supabase.",
+    "6. Add test src/pages/LiveHost.test.tsx verifying the component renders the go-live form."
+  ],
+  "acceptance_criteria": [
+    "LiveHost creates stream record in Firestore live_streams collection",
+    "LiveViewer reads stream from Firestore and shows viewer UI",
+    "Gift sending deducts from viewer wallet and credits host wallet in Firestore",
+    "Gift overlay animation shows when gifts are received",
+    "Top gifters list displays during live stream",
+    "LiveList reads active streams from Firestore",
+    "No Supabase imports remain in LiveHost, LiveViewer, or LiveList",
+    "npm run build succeeds",
+    "npm run test passes"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

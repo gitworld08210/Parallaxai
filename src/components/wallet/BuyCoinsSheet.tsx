@@ -53,12 +53,18 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
     if (!pay?.upi && !pay?.qr) return toast.error("Payments not configured yet");
     setLoading(true);
     try {
-      const docRef = await addDoc(collection(db, "coin_topups"), {
+      const packIndex = PACKS.indexOf(pack);
+      const docRef = await addDoc(collection(db, "coin_purchases"), {
         user_id: user.id,
-        coins: pack.coins,
+        package_id: `pack_${packIndex}`,
         amount_inr: pack.inr,
+        coins: pack.coins,
+        utr_number: null,
         status: "pending",
-        created_at: serverTimestamp()
+        admin_note: null,
+        created_at: serverTimestamp(),
+        approved_at: null,
+        approved_by: null,
       });
       setTopupId(docRef.id);
       setStep("pay");
@@ -75,10 +81,8 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
     if (!/^[0-9]{12}$/.test(cleaned)) return toast.error("Enter your 12-digit UPI UTR");
     setLoading(true);
     try {
-      await updateDoc(doc(db, "coin_topups", topupId), {
-        utr: cleaned,
-        status: "submitted",
-        updated_at: serverTimestamp()
+      await updateDoc(doc(db, "coin_purchases", topupId), {
+        utr_number: cleaned,
       });
       setStep("done");
     } catch (e: any) {

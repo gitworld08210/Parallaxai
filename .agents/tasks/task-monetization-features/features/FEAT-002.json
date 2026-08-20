@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Tipping/Gifting System using Firebase Firestore wallet-to-wallet coin transfers. Rewrite TipSheet to use Firebase (currently uses Supabase). Users can send Aura Coins to creators on posts and reels. Deducts from sender wallet, credits to creator wallet, logs transaction, shows tip animation.",
+  "status": "pending",
+  "steps": [
+    "1. Rewrite src/components/social/TipSheet.tsx to use Firebase Firestore instead of Supabase. The tip flow: user picks a coin amount (presets: 10, 25, 50, 100, 500, 1000 coins), optionally adds a message, and clicks Send. On send: (a) Read wallets/{senderId}.total to verify sufficient balance, (b) Deduct from wallets/{senderId}.total using increment(-amount), (c) Credit wallets/{creatorId}.total using increment(+amount), (d) Write a transaction doc to 'transactions/{id}' with {sender_id, recipient_id, amount, type: 'tip', post_id (optional), message, created_at: serverTimestamp()}, (e) Show success animation and toast. Remove all Supabase imports. Use the existing Sheet UI pattern but simplify to a direct coin transfer (no UPI/UTR - this uses wallet coins directly).",
+    "2. Add a tip animation component: Create src/components/social/TipAnimation.tsx - a framer-motion overlay that shows coins flying upward when a tip is sent. Use AnimatePresence with floating coin icons that fade out after 2 seconds.",
+    "3. Ensure PostCard already has the TipSheet integration (it does - tipOpen state with TipSheet component). Verify the props match the new TipSheet interface.",
+    "4. Add a 'Tip' button to Reels (src/pages/Reels.tsx): Add a Sparkles/Coins icon button in the action column (right side) that opens a TipSheet for the reel creator. Import TipSheet and add the necessary state.",
+    "5. Create src/hooks/useTipSend.ts: A hook encapsulating the tip logic (check balance, deduct, credit, log transaction) that TipSheet calls. This separates business logic from UI.",
+    "6. Add test src/components/social/TipSheet.test.tsx that renders TipSheet and verifies amount selection UI works."
+  ],
+  "acceptance_criteria": [
+    "TipSheet uses Firebase Firestore only (no Supabase imports)",
+    "Tip flow deducts coins from sender wallet, credits to recipient wallet",
+    "Transaction logged in 'transactions' collection with all required fields",
+    "Tip animation shows floating coins on successful tip",
+    "Reels page has a tip button that opens TipSheet for each reel creator",
+    "npm run build succeeds",
+    "npm run test passes"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

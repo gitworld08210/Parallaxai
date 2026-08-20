@@ -8,7 +8,8 @@ import {
   Zap,
   Briefcase,
   UserCheck,
-  ShieldCheck
+  ShieldCheck,
+  Coins
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -44,6 +45,7 @@ const AdminOSDashboard = () => {
         { label: "Verification Queue", icon: UserCheck, color: "text-blue-400", bg: "bg-blue-400/10", path: "/admin-os/verification" },
         { label: "Approvals Inbox", icon: ShieldCheck, color: "text-emerald-400", bg: "bg-emerald-400/10", path: "/admin-os/approvals" },
         { label: "Recruitment Center", icon: Briefcase, color: "text-orange-400", bg: "bg-orange-400/10", path: "/admin-os/recruitment" },
+        { label: "Finance", icon: Coins, color: "text-amber-400", bg: "bg-amber-400/10", path: "/admin-os/finance" },
       ]
     },
     {

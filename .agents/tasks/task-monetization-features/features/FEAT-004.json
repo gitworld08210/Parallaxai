@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-004",
+  "type": "feat",
+  "description": "Content Scheduling - Modify Compose.tsx to properly support scheduling posts with status 'scheduled' and scheduled_for timestamp. Show scheduled posts in Drafts page with publish-now ability. The scheduling UI already exists in Compose (scheduleOpen, scheduledFor states, datetime-local input, Sheet). Drafts page already shows scheduled posts tab. This feature: ensures the Compose scheduling saves to Firestore correctly, updates Drafts to read from Firestore instead of Supabase, and adds manual publish functionality.",
+  "status": "pending",
+  "steps": [
+    "1. Verify src/pages/Compose.tsx scheduling flow: The insertPost function already handles status 'scheduled' and writes to Firestore 'posts' collection with scheduled_for field. This already works correctly via the existing code. No changes needed to Compose.tsx unless there are bugs.",
+    "2. Rewrite src/pages/Drafts.tsx to use Firebase Firestore instead of Supabase. Currently it uses supabase.from('posts').select() - change to query Firestore 'posts' collection where user_id == current user and status in ['draft', 'scheduled']. Use the same UI structure but with Firebase queries. The publishNow function should updateDoc(doc(db, 'posts', id), { status: 'published', scheduled_for: null }). The remove function should deleteDoc.",
+    "3. Show scheduled posts with their scheduled_for datetime clearly. Add a visual indicator (Clock icon + formatted date) for scheduled posts.",
+    "4. Add test src/pages/Drafts.test.tsx verifying the component renders correctly."
+  ],
+  "acceptance_criteria": [
+    "Compose correctly saves posts with status 'scheduled' and scheduled_for timestamp to Firestore",
+    "Drafts page reads drafts and scheduled posts from Firestore (no Supabase)",
+    "Publish Now button updates post status to 'published' in Firestore",
+    "Delete button removes the post from Firestore",
+    "npm run build succeeds",
+    "npm run test passes"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
