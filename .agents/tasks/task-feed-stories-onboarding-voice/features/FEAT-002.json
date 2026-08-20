@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Stories System - Fix the existing stories pipeline to use Firestore throughout (StoryCompose currently uses Supabase), add proper story data model support, enhance StoryViewer with Firestore-based reactions, and add StoryRing component.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create `src/components/social/StoryRing.tsx` - a reusable avatar ring component that shows a gradient ring (conic-gradient purple/fuchsia) when user has unseen stories, a grey ring for seen stories, and no ring when no active stories. Props: `avatarUrl: string | null`, `username: string`, `displayName: string`, `hasUnseen: boolean`, `size?: 'sm' | 'md' | 'lg'`, `onClick?: () => void`. Use the existing `gradientFor` and `initialsOf` from `@/lib/format` for fallback avatars.",
     "Modify `src/pages/StoryCompose.tsx` to use Firebase Firestore instead of Supabase: (a) Remove `import { supabase } from '@/integrations/supabase/client'`. (b) In the `submit` function, replace `supabase.from('stories').insert(...)` with `addDoc(collection(db, 'stories'), { user_id: user.id, media_url: url, media_type: ..., audience, created_at: serverTimestamp(), expires_at: new Date(Date.now() + 24*60*60*1000).toISOString(), viewers: [], reactions: [], profile: { username: profile.username, display_name: profile.display_name, avatar_url: profile.avatar_url } })`. (c) For stickers, replace `supabase.from('story_stickers').insert(rows)` with writing to `story_stickers` collection in Firestore using `addDoc`. (d) Import `useAuth` to get `profile` for embedding profile data.",
@@ -22,5 +22,5 @@
     "npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All story files converted from Supabase to Firestore successfully. StoryRing component created with sm/md/lg sizes. Build and tests pass cleanly. StoriesRail still uses gradientFor/initialsOf internally for the Your Story section only - removed unused gradientFor import from StoriesRail since StoryRing handles it internally."
 }
