@@ -11,6 +11,9 @@ import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
 import { Sparkles, ArrowLeft, Mail, Lock, User, Briefcase, ChevronRight } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@/lib/zodResolver";
+import { loginSchema, signupSchema, type LoginFormData, type SignupFormData } from "@/lib/schemas";
 
 
 type Tab = "signin" | "signup";
@@ -30,11 +33,20 @@ const Auth = () => {
 
   const [tab, setTab] = useState<Tab>("signin");
   const [kind, setKind] = useState<AccountKind>("personal");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const loginForm = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  const signupForm = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { email: "", password: "", name: "" },
+  });
+
+  const form = tab === "signin" ? loginForm : signupForm;
 
   const routeForUser = async (uid: string) => {
     if (nextPath) { nav(nextPath, { replace: true }); return; }
@@ -68,8 +80,6 @@ const Auth = () => {
     if (!loading && user) routeForUser(user.id); 
   }, [user, loading]);
 
-  const validEmail = () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-
   const buildUsername = (raw: string, fallback: string) => {
     const base = (raw || fallback).toLowerCase().replace(/[^a-z0-9._]/g, "");
     return raw ? base : `${base}${Math.floor(1000 + Math.random() * 9000)}`;
@@ -86,15 +96,10 @@ const Auth = () => {
     }
   };
 
-  const handleAuth = async () => {
-    if (!validEmail() || password.length < 6) { 
-      toast.error("Please enter a valid email and 6+ character password"); 
-      return; 
-    }
-    if (tab === "signup" && !name.trim()) {
-      toast.error("Please enter your name");
-      return;
-    }
+  const handleAuth = async (formData: LoginFormData | SignupFormData) => {
+    const email = formData.email;
+    const password = formData.password;
+    const name = "name" in formData ? formData.name : "";
     setBusy(true);
     try {
       if (tab === "signin") {
@@ -221,28 +226,40 @@ const Auth = () => {
               )}
 
               <div className="space-y-3">
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  placeholder="Phone number, username or email"
-                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/50 transition-all placeholder:text-zinc-600"
-                />
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  placeholder="Password"
-                  className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/50 transition-all placeholder:text-zinc-600"
-                />
+                <div>
+                  <input 
+                    type="email" 
+                    {...form.register("email")}
+                    placeholder="Phone number, username or email"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/50 transition-all placeholder:text-zinc-600"
+                  />
+                  {form.formState.errors.email && (
+                    <p className="text-xs text-red-400 mt-1">{form.formState.errors.email.message}</p>
+                  )}
+                </div>
+                <div>
+                  <input 
+                    type="password" 
+                    {...form.register("password")}
+                    placeholder="Password"
+                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/50 transition-all placeholder:text-zinc-600"
+                  />
+                  {form.formState.errors.password && (
+                    <p className="text-xs text-red-400 mt-1">{form.formState.errors.password.message}</p>
+                  )}
+                </div>
                 {tab === "signup" && (
                   <>
-                    <input 
-                      value={name}
-                      onChange={e => setName(e.target.value)}
-                      placeholder="Full name"
-                      className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/50 transition-all placeholder:text-zinc-600"
-                    />
+                    <div>
+                      <input 
+                        {...signupForm.register("name")}
+                        placeholder="Full name"
+                        className="w-full bg-zinc-900 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-primary/50 transition-all placeholder:text-zinc-600"
+                      />
+                      {signupForm.formState.errors.name && (
+                        <p className="text-xs text-red-400 mt-1">{signupForm.formState.errors.name.message}</p>
+                      )}
+                    </div>
                     <input 
                       value={handle}
                       onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ""))}
@@ -257,7 +274,7 @@ const Auth = () => {
               </div>
 
               <button 
-                onClick={handleAuth}
+                onClick={form.handleSubmit(handleAuth)}
                 disabled={busy}
                 className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-xl transition-all active:scale-[0.98] disabled:opacity-50 text-sm shadow-lg shadow-primary/20"
               >

@@ -9,20 +9,30 @@ import { gradientFor, initialsOf } from "@/lib/format";
 import { toast } from "sonner";
 import { uploadToCloudinary } from "@/lib/cloudinary";
 import { supabase } from "@/integrations/supabase/client";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@/lib/zodResolver";
+import { profileSchema, type ProfileFormData } from "@/lib/schemas";
 
 
 
 const EditProfile = () => {
   const { user, profile, refreshProfile } = useAuth();
   const nav = useNavigate();
-  const [displayName, setDisplayName] = useState("");
-  const [username, setUsername] = useState("");
-  const [bio, setBio] = useState("");
   const [avatar, setAvatar] = useState<string | null>(null);
   const [cover, setCover] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [bioAiBusy, setBioAiBusy] = useState(false);
   const [bioVariants, setBioVariants] = useState<Array<{ style: string; text: string }>>([]);
+
+  const form = useForm<ProfileFormData>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { display_name: "", username: "", bio: "" },
+    mode: "onChange",
+  });
+
+  const displayName = form.watch("display_name");
+  const username = form.watch("username");
+  const bio = form.watch("bio") || "";
 
   const rewriteBio = async () => {
     setBioAiBusy(true);
@@ -39,9 +49,11 @@ const EditProfile = () => {
 
   useEffect(() => {
     if (profile) {
-      setDisplayName(profile.display_name || "");
-      setUsername(profile.username);
-      setBio(profile.bio || "");
+      form.reset({
+        display_name: profile.display_name || "",
+        username: profile.username,
+        bio: profile.bio || "",
+      });
       setAvatar(profile.avatar_url);
       setCover((profile as any).cover_url ?? null);
     }
@@ -62,7 +74,11 @@ const EditProfile = () => {
 
   const save = async () => {
     if (!user) return;
+    const isValid = await form.trigger();
+    if (!isValid) return;
     setBusy(true);
+    
+    const formData = form.getValues();
     
     try {
       // 1. Update Profile in Firestore (Primary Source of Truth)
@@ -72,9 +88,9 @@ const EditProfile = () => {
       const profileData = {
         id: user.uid,
         user_id: user.uid,
-        display_name: displayName,
-        username,
-        bio,
+        display_name: formData.display_name,
+        username: formData.username,
+        bio: formData.bio || "",
         avatar_url: avatar,
         cover_url: cover,
         updated_at: serverTimestamp(),
@@ -83,8 +99,8 @@ const EditProfile = () => {
       await setDoc(doc(db, "profiles", user.uid), profileData, { merge: true });
       
       // Also try writing to username-indexed doc for resolution efficiency
-      if (username) {
-        await setDoc(doc(db, "usernames", username.toLowerCase()), { 
+      if (formData.username) {
+        await setDoc(doc(db, "usernames", formData.username.toLowerCase()), { 
           user_id: user.uid,
           uid: user.uid 
         }, { merge: true });
@@ -93,9 +109,9 @@ const EditProfile = () => {
       // 2. Sync to Supabase for backend triggers/legacy logic
       try {
         await supabase.from("profiles").update({
-          display_name: displayName, 
-          username, 
-          bio, 
+          display_name: formData.display_name, 
+          username: formData.username, 
+          bio: formData.bio || "", 
           avatar_url: avatar, 
           cover_url: cover,
         } as any).eq("user_id", user.uid);
@@ -159,8 +175,33 @@ const EditProfile = () => {
         </div>
 
         <div className="space-y-4 pt-2">
-          <Field label="Display name" value={displayName} onChange={setDisplayName} maxLength={50} />
-          <Field label="Username" value={username} onChange={(v) => setUsername(v.toLowerCase().replace(/[^a-z0-9_]/g, ""))} maxLength={24} />
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-1">Display name</label>
+            <input
+              {...form.register("display_name")}
+              maxLength={50}
+              className="w-full bg-zinc-900 border border-white/5 rounded-2xl px-4 py-3.5 text-[15px] outline-none focus:border-primary/50 transition-colors"
+            />
+            {form.formState.errors.display_name && (
+              <p className="text-xs text-red-400 mt-1">{form.formState.errors.display_name.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-1">Username</label>
+            <input
+              {...form.register("username", {
+                onChange: (e) => {
+                  const filtered = e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, "");
+                  form.setValue("username", filtered, { shouldValidate: true });
+                },
+              })}
+              maxLength={24}
+              className="w-full bg-zinc-900 border border-white/5 rounded-2xl px-4 py-3.5 text-[15px] outline-none focus:border-primary/50 transition-colors"
+            />
+            {form.formState.errors.username && (
+              <p className="text-xs text-red-400 mt-1">{form.formState.errors.username.message}</p>
+            )}
+          </div>
           <div>
             <div className="flex items-center justify-between mb-1.5 px-1">
               <label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Bio</label>
@@ -175,17 +216,21 @@ const EditProfile = () => {
               </button>
             </div>
             <textarea
-              value={bio} onChange={(e) => setBio(e.target.value)} maxLength={200} rows={4}
+              {...form.register("bio")}
+              maxLength={200} rows={4}
               className="w-full bg-zinc-900 border border-white/5 rounded-2xl p-4 text-[15px] outline-none resize-none focus:border-primary/50 transition-colors"
               placeholder="Tell us about yourself..."
             />
+            {form.formState.errors.bio && (
+              <p className="text-xs text-red-400 mt-1">{form.formState.errors.bio.message}</p>
+            )}
             {bioVariants.length > 0 && (
               <div className="mt-3 space-y-2">
                 {bioVariants.map((v, i) => (
                   <button
                     key={i}
                     type="button"
-                    onClick={() => { setBio(v.text); setBioVariants([]); }}
+                    onClick={() => { form.setValue("bio", v.text, { shouldValidate: true }); setBioVariants([]); }}
                     className="w-full text-left bg-zinc-900 border border-white/5 rounded-2xl p-4 text-[14px] hover:bg-zinc-800 transition-colors"
                   >
                     <div className="text-[10px] font-black uppercase tracking-widest text-primary mb-1">{v.style}</div>
@@ -204,13 +249,5 @@ const EditProfile = () => {
     </div>
   );
 };
-
-const Field = ({ label, value, onChange, maxLength }: any) => (
-  <div>
-    <label className="block text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-1">{label}</label>
-    <input value={value} onChange={(e) => onChange(e.target.value)} maxLength={maxLength}
-      className="w-full bg-zinc-900 border border-white/5 rounded-2xl px-4 py-3.5 text-[15px] outline-none focus:border-primary/50 transition-colors" />
-  </div>
-);
 
 export default EditProfile;

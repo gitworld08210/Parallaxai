@@ -2,7 +2,7 @@
   "id": "FEAT-004",
   "type": "feat",
   "description": "Form validation with Zod schemas and react-hook-form integration for Auth, Compose, and EditProfile pages",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Create src/lib/schemas.ts with Zod schemas: signupSchema (email: valid email, password: min 6 chars, name: min 1 char required), loginSchema (email: valid email, password: min 1 char), profileSchema (display_name: min 1 max 50, username: min 1 max 24 lowercase alphanumeric plus _ and ., bio: max 200 optional), composeSchema (content: max 2200 chars, must have content or media - use refine), reportSchema (reason: min 1 char required). Use zod v4 syntax since package.json has zod ^4.4.3.",
     "Update src/pages/Auth.tsx - integrate react-hook-form with zodResolver. Use useForm with loginSchema or signupSchema depending on tab. Replace manual validation with form.handleSubmit(). Show inline error messages below each input field using form.formState.errors with red text styling.",

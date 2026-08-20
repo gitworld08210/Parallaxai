@@ -12,6 +12,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { toast } from "sonner";
 import { FilterStrip, FilterKey, filterCss } from "@/components/compose/FilterStrip";
 import { uploadToCloudinary } from "@/lib/cloudinary";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@/lib/zodResolver";
+import { composeSchema, type ComposeFormData } from "@/lib/schemas";
 
 
 type CollabPick = { user_id: string; username: string; display_name: string; avatar_url: string | null };
@@ -19,7 +22,6 @@ type CollabPick = { user_id: string; username: string; display_name: string; ava
 const Compose = () => {
   const { user, profile } = useAuth();
   const nav = useNavigate();
-  const [content, setContent] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -30,6 +32,23 @@ const Compose = () => {
   const [scheduledFor, setScheduledFor] = useState<string>("");
   const [certify, setCertify] = useState(false);
   const [filter, setFilter] = useState<FilterKey>("none");
+
+  const composeForm = useForm<ComposeFormData>({
+    resolver: zodResolver(composeSchema),
+    defaultValues: { content: "", hasMedia: false },
+    mode: "onChange",
+  });
+
+  const content = composeForm.watch("content");
+
+  // Keep hasMedia in sync with file state
+  useEffect(() => {
+    composeForm.setValue("hasMedia", !!file);
+  }, [file]);
+
+  const setContent = (value: string) => {
+    composeForm.setValue("content", value, { shouldValidate: true });
+  };
 
   // AI suggest
   const [suggestOpen, setSuggestOpen] = useState(false);
@@ -131,7 +150,9 @@ const Compose = () => {
 
   const insertPost = async (status: "draft" | "scheduled" | "published", scheduled_for: string | null) => {
     if (!user) return;
-    if (!content.trim() && !file) return toast.error("Add a thought or media");
+    // Trigger validation
+    const isValid = await composeForm.trigger();
+    if (!isValid) return;
     setBusy(true);
     try {
       if (status === "published" && content.trim()) {
@@ -218,13 +239,20 @@ const Compose = () => {
 
       <div className="px-4">
         <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
+          {...composeForm.register("content")}
           placeholder="Share something…"
-          maxLength={1000}
+          maxLength={2200}
           rows={5}
           className="w-full bg-zinc-900 border border-white/5 rounded-2xl p-4 text-[15px] outline-none resize-none focus:border-primary/50 transition-colors"
         />
+        <div className="flex items-center justify-between px-1 mt-1">
+          {composeForm.formState.errors.content && (
+            <p className="text-xs text-red-400">{composeForm.formState.errors.content.message}</p>
+          )}
+          <span className={`text-xs ml-auto ${content.length > 2000 ? "text-red-400" : "text-muted-foreground"}`}>
+            {content.length}/2200
+          </span>
+        </div>
 
         <div className="mt-4 flex items-center gap-2 flex-wrap">
           <label className="bg-zinc-900 border border-white/5 rounded-xl px-4 py-2 text-xs font-bold flex items-center gap-2 cursor-pointer hover:bg-zinc-800 transition-colors">
