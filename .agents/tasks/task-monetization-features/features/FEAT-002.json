@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Tipping/Gifting System using Firebase Firestore wallet-to-wallet coin transfers. Rewrite TipSheet to use Firebase (currently uses Supabase). Users can send Aura Coins to creators on posts and reels. Deducts from sender wallet, credits to creator wallet, logs transaction, shows tip animation.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "1. Rewrite src/components/social/TipSheet.tsx to use Firebase Firestore instead of Supabase. The tip flow: user picks a coin amount (presets: 10, 25, 50, 100, 500, 1000 coins), optionally adds a message, and clicks Send. On send: (a) Read wallets/{senderId}.total to verify sufficient balance, (b) Deduct from wallets/{senderId}.total using increment(-amount), (c) Credit wallets/{creatorId}.total using increment(+amount), (d) Write a transaction doc to 'transactions/{id}' with {sender_id, recipient_id, amount, type: 'tip', post_id (optional), message, created_at: serverTimestamp()}, (e) Show success animation and toast. Remove all Supabase imports. Use the existing Sheet UI pattern but simplify to a direct coin transfer (no UPI/UTR - this uses wallet coins directly).",
     "2. Add a tip animation component: Create src/components/social/TipAnimation.tsx - a framer-motion overlay that shows coins flying upward when a tip is sent. Use AnimatePresence with floating coin icons that fade out after 2 seconds.",
@@ -25,5 +25,5 @@
     "npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Build passes. All 21 tests pass. The TipSheet test had a minor issue with '500 coins' text appearing in both the preset button and balance display (since mock returns 500 balance), resolved by using getAllByText. Pre-existing unused supabase import in Reels.tsx left as-is since it does not affect build."
 }
