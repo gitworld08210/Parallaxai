@@ -1,0 +1,31 @@
+{
+  "project_type": "React 18 + TypeScript + Vite SPA with Firebase backend, Capacitor Android, dark-themed mobile-first social media app",
+  "language": "TypeScript/React",
+  "build_system": "Vite + npm; build output in dist/",
+  "test_framework": "Vitest with jsdom environment, @testing-library/react, setup in src/test/setup.ts",
+  "build_command": "npm run build",
+  "test_command": "npm run test",
+  "verification_instructions": "1. Run `npm run build` to verify no TypeScript/build errors. 2. Run `npm run test` to verify all unit tests pass.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "npm install (already done, node_modules present)",
+  "environment_constraints": "Open internet - npm installs work. Firebase env vars are in .env. Supabase client exists as legacy shim but primary backend is Firebase Firestore.",
+  "contribution_requirements": "Use existing patterns: Firebase Firestore for data, Cloudinary for media uploads, shadcn/ui components, Framer Motion animations, dark theme with glassmorphism/gradient accents, mobile-first 440px max-width shell.",
+  "key_patterns": "Firebase Firestore: collection/query/getDocs/onSnapshot pattern. Auth: useAuth() hook from src/contexts/AuthProvider.tsx returning {user, profile}. Routing: src/routes/index.tsx with ProtectedRoute wrapper and AppShell layout. Components: lucide-react icons, tailwind classes, CSS custom properties for theming (hsl(var(--name))). Media uploads: uploadToCloudinary from src/lib/cloudinary.ts. Posts have FeedPost type in PostCard.tsx with profile nested object. Stories already have a StoryViewer component but it still uses supabase for reactions.",
+  "relevant_files": [
+    "src/pages/Feed.tsx",
+    "src/components/social/PostCard.tsx",
+    "src/components/social/StoriesRail.tsx",
+    "src/components/social/StoryViewer.tsx",
+    "src/pages/StoryCompose.tsx",
+    "src/pages/Conversation.tsx",
+    "src/components/dm/VoiceMessage.tsx",
+    "src/contexts/AuthProvider.tsx",
+    "src/lib/firebase.ts",
+    "src/lib/cloudinary.ts",
+    "src/routes/index.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/ProfileCreation.tsx",
+    "src/integrations/supabase/client.ts"
+  ],
+  "directory_structure": "src/pages/ (page components), src/components/ (UI components organized by domain: social/, dm/, vibe/, layout/, etc.), src/hooks/ (custom hooks), src/services/ (service modules), src/contexts/ (React context providers), src/lib/ (utility modules: firebase, cloudinary, format), src/routes/ (route definitions), src/test/ (test setup)"
+}

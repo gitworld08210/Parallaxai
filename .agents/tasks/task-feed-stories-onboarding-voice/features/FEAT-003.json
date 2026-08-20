@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Smart Onboarding - Build a multi-step onboarding flow for new users with interest picker, creator suggestions, and profile completion. Route new users to onboarding after signup.",
+  "status": "pending",
+  "steps": [
+    "Create `src/pages/Onboarding.tsx` with a multi-step onboarding flow: Step 1 'Pick 5+ interests': Display a grid of topic cards (Art, Music, Tech, Fashion, Comedy, Education, Sports, Food, Travel, Gaming, Photography, Science, Business, Health, Nature, Movies, Books, DIY, Dance, Pets). Each card is a toggleable button with an icon and label. Show count of selected interests and require minimum 5. Use motion animations (staggered fade-in). Step 2 'Follow 5+ creators': Show a list of suggested creator cards (fetch from Firestore `profiles` collection where `is_creator === true`, limit 20). Each card shows avatar, name, bio snippet, and a Follow button. Track selected count, require minimum 5. Step 3 'Complete your profile': Optional avatar upload (use uploadToCloudinary) + bio textarea. Non-blocking (can skip). Final CTA: 'Start Exploring' button.",
+    "In the Onboarding page submit logic: (a) Save selected interests to `user_interests/{userId}` in Firestore with each topic getting an initial score of 1.0. (b) For each followed creator, write a follow document to Firestore `follows` collection: { follower_id: user.id, following_id: creatorId, created_at: serverTimestamp() }. (c) Update the user's profile with `onboarded_at: serverTimestamp()` and optionally avatar_url and bio if provided. (d) Navigate to '/' after completion.",
+    "Modify `src/pages/Auth.tsx` to route new users to onboarding: In the `routeForUser` function, after checking if profile exists, add a check: if `prof` exists but `prof.interests` is null or empty (meaning they haven't gone through interest selection), navigate to '/onboarding' instead of '/'. Keep the existing profile-creation redirect for users without display_name/username.",
+    "Add the `/onboarding` route to `src/routes/index.tsx`: Import the Onboarding page (lazy or direct) and add it inside the ProtectedRoute but outside AppShell (full-screen experience like profile-creation). Place it after the profile-creation route: `<Route path='/onboarding' element={<Onboarding />} />`.",
+    "Style the onboarding with the existing dark theme patterns: bg-background, text-foreground, gradient accent buttons (bg-primary), card backgrounds (bg-card with border-border), glassmorphism effects. Use Framer Motion for step transitions (AnimatePresence with slide animations)."
+  ],
+  "acceptance_criteria": [
+    "src/pages/Onboarding.tsx exists with 3 steps: interest picker, creator suggestions, profile completion",
+    "Interest picker requires 5+ selections and displays a grid of 20 topic options",
+    "Creator suggestions fetch from Firestore profiles where is_creator is true",
+    "Onboarding saves interests to user_interests/{userId} in Firestore",
+    "Onboarding creates follow documents in Firestore follows collection",
+    "Auth.tsx routes users without interests to /onboarding",
+    "Route /onboarding is registered in src/routes/index.tsx",
+    "npm run build succeeds"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

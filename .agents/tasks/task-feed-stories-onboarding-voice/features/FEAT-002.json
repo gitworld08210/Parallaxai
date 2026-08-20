@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Stories System - Fix the existing stories pipeline to use Firestore throughout (StoryCompose currently uses Supabase), add proper story data model support, enhance StoryViewer with Firestore-based reactions, and add StoryRing component.",
+  "status": "pending",
+  "steps": [
+    "Create `src/components/social/StoryRing.tsx` - a reusable avatar ring component that shows a gradient ring (conic-gradient purple/fuchsia) when user has unseen stories, a grey ring for seen stories, and no ring when no active stories. Props: `avatarUrl: string | null`, `username: string`, `displayName: string`, `hasUnseen: boolean`, `size?: 'sm' | 'md' | 'lg'`, `onClick?: () => void`. Use the existing `gradientFor` and `initialsOf` from `@/lib/format` for fallback avatars.",
+    "Modify `src/pages/StoryCompose.tsx` to use Firebase Firestore instead of Supabase: (a) Remove `import { supabase } from '@/integrations/supabase/client'`. (b) In the `submit` function, replace `supabase.from('stories').insert(...)` with `addDoc(collection(db, 'stories'), { user_id: user.id, media_url: url, media_type: ..., audience, created_at: serverTimestamp(), expires_at: new Date(Date.now() + 24*60*60*1000).toISOString(), viewers: [], reactions: [], profile: { username: profile.username, display_name: profile.display_name, avatar_url: profile.avatar_url } })`. (c) For stickers, replace `supabase.from('story_stickers').insert(rows)` with writing to `story_stickers` collection in Firestore using `addDoc`. (d) Import `useAuth` to get `profile` for embedding profile data.",
+    "Modify `src/components/social/StoryViewer.tsx` to use Firebase Firestore for reactions instead of Supabase: (a) Remove `import { supabase } from '@/integrations/supabase/client'`. (b) Replace the `react` function: instead of `supabase.from('story_reactions').insert(...)`, use `updateDoc(doc(db, 'stories', current.id), { reactions: arrayUnion({ user_id: user.uid, emoji, created_at: new Date().toISOString() }) })`. (c) Add viewer tracking: when a story is displayed, call `updateDoc(doc(db, 'stories', current.id), { viewers: arrayUnion(user.uid) })` if `current.user_id !== user?.uid`. (d) Import needed Firestore functions from firebase/firestore.",
+    "Modify `src/components/social/StoriesRail.tsx` to use the new StoryRing component for rendering each user's story circle instead of inline JSX. Import StoryRing and replace the button content with `<StoryRing avatarUrl={g.profile?.avatar_url} username={g.profile?.username || ''} displayName={g.profile?.display_name || ''} hasUnseen={true} size='md' />`.",
+    "Ensure `npm run build` succeeds and the stories pipeline is fully on Firebase Firestore with no Supabase references in story-related files."
+  ],
+  "acceptance_criteria": [
+    "src/components/social/StoryRing.tsx exists with proper props interface and gradient ring styling",
+    "StoryCompose.tsx saves stories to Firestore 'stories' collection with correct data model (user_id, media_url, media_type, created_at, expires_at, viewers, reactions, profile)",
+    "StoryViewer.tsx uses Firestore for reactions (arrayUnion) and viewer tracking, no Supabase imports",
+    "StoriesRail.tsx uses StoryRing component",
+    "npm run build succeeds with no TypeScript errors"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

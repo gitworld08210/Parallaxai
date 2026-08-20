@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-004",
+  "type": "feat",
+  "description": "Voice Notes in DMs - Fix the VoiceRecorder component to upload audio via Cloudinary instead of the broken Supabase storage path, and ensure proper integration in the Conversation page.",
+  "status": "pending",
+  "steps": [
+    "Modify `src/components/dm/VoiceMessage.tsx` VoiceRecorder component: (a) Remove the `import { supabase }` line at the top. (b) Import `uploadToCloudinary` from `@/lib/cloudinary`. (c) In the `send` function, replace the Supabase storage upload with: `const publicUrl = await uploadToCloudinary(blobRef.current);`. This will upload the audio blob to Cloudinary and return the secure URL. (d) Remove the hardcoded 'https://example.com/audio.webm' placeholder.",
+    "Verify `src/pages/Conversation.tsx` integration is correct: The `sendVoice` function already handles the flow (receives mediaUrl from VoiceRecorder's onSend callback, creates a message doc in Firestore with media_url and media_type 'audio', updates conversation metadata). Confirm that the VoiceRecorder is shown when text input is empty (already done - conditional render at bottom of composer). No changes should be needed in Conversation.tsx.",
+    "Add a simple unit test in `src/components/dm/VoiceMessage.test.tsx` that tests the VoiceBubble component renders with proper play/pause button and time display. Mock the Audio element. Test that clicking play toggles the button state."
+  ],
+  "acceptance_criteria": [
+    "VoiceRecorder in VoiceMessage.tsx uses uploadToCloudinary instead of Supabase storage or placeholder URL",
+    "No supabase import remains in VoiceMessage.tsx",
+    "Conversation.tsx sendVoice function correctly integrates with VoiceRecorder (already working, just confirm no breakage)",
+    "VoiceBubble test passes",
+    "npm run build succeeds"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

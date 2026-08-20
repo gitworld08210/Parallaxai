@@ -1,0 +1,7 @@
+{
+  "task_id": "task-feed-stories-onboarding-voice",
+  "task_description": "Implement four major features for the Parallax/Aurelix social platform: (1) Feed Algorithm / Interest Engine with engagement tracking and ranked For You feed, (2) Stories System fully on Firebase Firestore with StoryRing component, (3) Smart Onboarding with interest picker and creator suggestions, (4) Voice Notes in DMs with proper Cloudinary upload.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}

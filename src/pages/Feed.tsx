@@ -13,6 +13,7 @@ import { SideMenu } from "@/components/layout/SideMenu";
 import { AuraAvatar } from "@/components/vibe/AuraAvatar";
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { getInterestVector, scorePosts } from "@/services/interestEngine";
 
 import { useAuth } from "@/contexts/AuthProvider";
 import { gradientFor, initialsOf } from "@/lib/format";
@@ -44,7 +45,15 @@ const Feed = () => {
         ...doc.data(),
         liked: false // Initialize liked state
       })) as FeedPost[];
-      setPosts(postsData);
+
+      if (tab === "foryou") {
+        // Rank posts using interest engine for the For You tab
+        const interests = await getInterestVector(user.id);
+        const rankedPosts = scorePosts(postsData, interests);
+        setPosts(rankedPosts);
+      } else {
+        setPosts(postsData);
+      }
     } catch (err) {
       console.error("Error loading feed:", err);
     } finally {
