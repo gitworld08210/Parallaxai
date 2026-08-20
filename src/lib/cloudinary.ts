@@ -9,10 +9,42 @@ export const CLOUDINARY_CONFIG = {
   apiBase: `https://api.cloudinary.com/v1_1/${CLOUD_NAME}`
 };
 
+// ─── Upload Validation ──────────────────────────────────────────────────────
+
+const MAX_UPLOAD_SIZE_MB = 50; // 50 MB hard limit
+const MAX_UPLOAD_SIZE_BYTES = MAX_UPLOAD_SIZE_MB * 1024 * 1024;
+
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+  "image/svg+xml",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "audio/mpeg",
+  "audio/wav",
+  "audio/ogg",
+  "application/pdf",
+]);
+
 /**
  * Upload a file to Cloudinary. Image files are compressed before upload.
+ * Validates file size (max 50MB) and MIME type before uploading.
  */
 export const uploadToCloudinary = async (file: File | Blob): Promise<string> => {
+  // ─── Validation ─────────────────────────────────────────────────────────
+  if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+    throw new Error(`File too large. Maximum size is ${MAX_UPLOAD_SIZE_MB}MB.`);
+  }
+
+  const mimeType = file instanceof File ? file.type : (file as Blob).type;
+  if (mimeType && !ALLOWED_MIME_TYPES.has(mimeType)) {
+    throw new Error(`File type "${mimeType}" is not allowed. Please upload an image, video, or audio file.`);
+  }
+
   let uploadFile: File | Blob = file;
 
   // Compress image files before upload
@@ -35,11 +67,21 @@ export const uploadToCloudinary = async (file: File | Blob): Promise<string> => 
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || "Cloudinary upload failed");
+    let errorMsg = "Cloudinary upload failed";
+    try {
+      const error = await response.json();
+      errorMsg = error?.error?.message || error?.message || errorMsg;
+    } catch {
+      // If response isn't JSON, use status text
+      errorMsg = `Upload failed: ${response.status} ${response.statusText}`;
+    }
+    throw new Error(errorMsg);
   }
 
   const data = await response.json();
+  if (!data.secure_url) {
+    throw new Error("Upload succeeded but no URL was returned");
+  }
   return data.secure_url;
 };
 

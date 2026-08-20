@@ -1,6 +1,11 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback, useRef } from "react";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, signOut as firebaseSignOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  onAuthStateChanged,
+  signOut as firebaseSignOut,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword as firebaseSignIn,
+} from "firebase/auth";
 import { supabase } from "@/integrations/supabase/client";
 
 type Profile = {
@@ -53,16 +58,20 @@ type Ctx = {
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   signupWithEmailAndPassword: (email: string, password: string) => Promise<any>;
-  signInWithEmailAndPassword: (email: string, password: string) => Promise<any>;
+  signInWithEmail: (email: string, password: string) => Promise<any>;
 };
 
 const AuthCtx = createContext<Ctx | undefined>(undefined);
+
+// Token refresh interval (50 minutes — Firebase tokens expire at 60 min)
+const TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const tokenRefreshTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshProfile = useCallback(async () => {
     if (!user?.uid) return;
@@ -105,52 +114,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   // Create profile in Supabase if it doesn't exist
-  const createProfileInSupabase = useCallback(async (userId: string, email: string, displayName: string, photoURL: string | null) => {
-    const username = email?.split('@')[0] || userId.slice(0, 8);
-    
-    const { data: existingProfile, error: fetchError } = await supabase
-      .from("profiles")
-      .select("user_id")
-      .eq("user_id", userId)
-      .maybeSingle();
+  const createProfileInSupabase = useCallback(async (userId: string, email: string, displayName: string | null, photoURL: string | null) => {
+    try {
+      const username = email?.split('@')[0] || userId.slice(0, 8);
 
-    if (fetchError) {
-      console.error("Error checking existing profile:", fetchError);
-      return;
-    }
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from("profiles")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
 
-    if (!existingProfile) {
-      const { error } = await supabase.from("profiles").insert({
-        user_id: userId,
-        username: username,
-        display_name: displayName || username,
-        avatar_url: photoURL,
-        onboarded_at: new Date().toISOString(),
-        verified: false,
-        followers_count: 0,
-        following_count: 0,
-        posts_count: 0,
-      });
-
-      if (error) {
-        console.error("Error creating profile in Supabase:", error);
+      if (fetchError) {
+        console.error("Error checking existing profile:", fetchError);
+        return;
       }
+
+      if (!existingProfile) {
+        const { error } = await supabase.from("profiles").insert({
+          user_id: userId,
+          username: username,
+          display_name: displayName || username,
+          avatar_url: photoURL,
+          onboarded_at: new Date().toISOString(),
+          verified: false,
+          followers_count: 0,
+          following_count: 0,
+          posts_count: 0,
+        });
+
+        if (error) {
+          console.error("Error creating profile in Supabase:", error);
+        }
+      }
+    } catch (err) {
+      console.error("createProfileInSupabase failed:", err);
     }
   }, []);
 
+  // ─── FIX: Renamed to avoid shadowing Firebase import ───────────────────────
   const signupWithEmailAndPassword = async (email: string, password: string) => {
     try {
       const result = await createUserWithEmailAndPassword(auth, email, password);
       const { user: fbUser } = result;
-      
-      // Create profile in Supabase
+
       await createProfileInSupabase(
         fbUser.uid,
         fbUser.email || "",
         fbUser.displayName,
         fbUser.photoURL
       );
-      
+
       return result;
     } catch (error) {
       console.error("Signup error:", error);
@@ -158,19 +171,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signInWithEmailAndPassword = async (email: string, password: string) => {
+  // ─── FIX: Previously called `signInWithEmailAndPassword` which shadowed the
+  //     Firebase import and caused infinite recursion (stack overflow on login).
+  //     Renamed local method to `signInWithEmail` and uses `firebaseSignIn` alias.
+  const signInWithEmail = async (email: string, password: string) => {
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
+      const result = await firebaseSignIn(auth, email, password);
       const { user: fbUser } = result;
-      
-      // Ensure profile exists in Supabase
+
       await createProfileInSupabase(
         fbUser.uid,
         fbUser.email || "",
         fbUser.displayName,
         fbUser.photoURL
       );
-      
+
       return result;
     } catch (error) {
       console.error("Signin error:", error);
@@ -178,18 +193,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  useEffect(() => {
-    let profileUnsub: (() => void) | null = null;
-
-    const authUnsub = onAuthStateChanged(auth, async (fbUser) => {
-      if (profileUnsub) {
-        profileUnsub();
-        profileUnsub = null;
+  // ─── Token refresh: keep Firebase token fresh ─────────────────────────────
+  const startTokenRefresh = useCallback(() => {
+    if (tokenRefreshTimer.current) {
+      clearInterval(tokenRefreshTimer.current);
+    }
+    tokenRefreshTimer.current = setInterval(async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        try {
+          const newToken = await currentUser.getIdToken(true);
+          setSession((prev) => prev ? { ...prev, access_token: newToken } : null);
+        } catch (err) {
+          console.error("Token refresh failed:", err);
+        }
       }
+    }, TOKEN_REFRESH_INTERVAL);
+  }, []);
 
+  const stopTokenRefresh = useCallback(() => {
+    if (tokenRefreshTimer.current) {
+      clearInterval(tokenRefreshTimer.current);
+      tokenRefreshTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    const authUnsub = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser) {
         const token = await fbUser.getIdToken();
-        
+
         // Create profile in Supabase if it doesn't exist
         await createProfileInSupabase(
           fbUser.uid,
@@ -212,93 +245,123 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           created_at: fbUser.metadata.creationTime || new Date().toISOString(),
           last_sign_in_at: fbUser.metadata.lastSignInTime || new Date().toISOString(),
         });
-        
+
         setSession({
           access_token: token,
           refresh_token: "firebase-managed",
-          user: fbUser
+          user: fbUser,
         });
 
-        // Fetch profile from Supabase
-        profileUnsub = supabase
-          .from("profiles")
-          .select("*")
-          .eq("user_id", fbUser.uid)
-          .maybeSingle()
-          .then(({ data, error }) => {
-            if (error) {
-              console.error("Profile fetch error:", error);
-              // Set fallback profile
-              setProfile({
-                id: fbUser.uid,
-                user_id: fbUser.uid,
-                username: fbUser.email?.split('@')[0] || fbUser.uid.slice(0, 8),
-                display_name: fbUser.displayName || fbUser.email?.split('@')[0] || "User",
-                avatar_url: fbUser.photoURL,
-                onboarded_at: new Date().toISOString(),
-                verified: false,
-                followers_count: 0,
-                following_count: 0,
-                posts_count: 0,
-              } as any);
-            } else if (data) {
-              setProfile({
-                id: data.id,
-                user_id: data.user_id,
-                username: data.username,
-                display_name: data.display_name,
-                avatar_url: data.avatar_url,
-                cover_url: data.cover_url,
-                bio: data.bio,
-                verified: data.verified,
-                verification_kind: data.verification_kind,
-                followers_count: data.followers_count,
-                following_count: data.following_count,
-                posts_count: data.posts_count,
-                onboarded_at: data.onboarded_at,
-                interests: data.interests,
-                account_type: data.account_type,
-                organization_id: data.organization_id,
-                is_creator: data.is_creator,
-                is_admin: data.is_admin,
-                is_founder: data.is_founder,
-                role: data.role,
-                department: data.department,
-              });
-            } else {
-              // Fallback profile if none exists
-              setProfile({
-                id: fbUser.uid,
-                user_id: fbUser.uid,
-                username: fbUser.email?.split('@')[0] || fbUser.uid.slice(0, 8),
-                display_name: fbUser.displayName || fbUser.email?.split('@')[0] || "User",
-                avatar_url: fbUser.photoURL,
-                onboarded_at: new Date().toISOString(),
-                verified: false,
-                followers_count: 0,
-                following_count: 0,
-                posts_count: 0,
-              } as any);
-            }
-            setLoading(false);
+        // Start token refresh timer
+        startTokenRefresh();
+
+        // ─── FIX: Previously assigned a Promise to a variable typed as (() => void).
+        //     Now properly awaiting the query and handling the result inline.
+        try {
+          const { data, error } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("user_id", fbUser.uid)
+            .maybeSingle();
+
+          if (error) {
+            console.error("Profile fetch error:", error);
+            setProfile({
+              id: fbUser.uid,
+              user_id: fbUser.uid,
+              username: fbUser.email?.split('@')[0] || fbUser.uid.slice(0, 8),
+              display_name: fbUser.displayName || fbUser.email?.split('@')[0] || "User",
+              avatar_url: fbUser.photoURL,
+              cover_url: null,
+              bio: null,
+              onboarded_at: new Date().toISOString(),
+              verified: false,
+              verification_kind: null,
+              followers_count: 0,
+              following_count: 0,
+              posts_count: 0,
+            });
+          } else if (data) {
+            setProfile({
+              id: data.id,
+              user_id: data.user_id,
+              username: data.username,
+              display_name: data.display_name,
+              avatar_url: data.avatar_url,
+              cover_url: data.cover_url,
+              bio: data.bio,
+              verified: data.verified,
+              verification_kind: data.verification_kind,
+              followers_count: data.followers_count,
+              following_count: data.following_count,
+              posts_count: data.posts_count,
+              onboarded_at: data.onboarded_at,
+              interests: data.interests,
+              account_type: data.account_type,
+              organization_id: data.organization_id,
+              is_creator: data.is_creator,
+              is_admin: data.is_admin,
+              is_founder: data.is_founder,
+              role: data.role,
+              department: data.department,
+            });
+          } else {
+            // Fallback profile if none exists
+            setProfile({
+              id: fbUser.uid,
+              user_id: fbUser.uid,
+              username: fbUser.email?.split('@')[0] || fbUser.uid.slice(0, 8),
+              display_name: fbUser.displayName || fbUser.email?.split('@')[0] || "User",
+              avatar_url: fbUser.photoURL,
+              cover_url: null,
+              bio: null,
+              onboarded_at: new Date().toISOString(),
+              verified: false,
+              verification_kind: null,
+              followers_count: 0,
+              following_count: 0,
+              posts_count: 0,
+            });
+          }
+        } catch (profileErr) {
+          console.error("Profile fetch exception:", profileErr);
+          setProfile({
+            id: fbUser.uid,
+            user_id: fbUser.uid,
+            username: fbUser.email?.split('@')[0] || fbUser.uid.slice(0, 8),
+            display_name: fbUser.displayName || fbUser.email?.split('@')[0] || "User",
+            avatar_url: fbUser.photoURL,
+            cover_url: null,
+            bio: null,
+            onboarded_at: new Date().toISOString(),
+            verified: false,
+            verification_kind: null,
+            followers_count: 0,
+            following_count: 0,
+            posts_count: 0,
           });
+        }
+
+        setLoading(false);
       } else {
         setUser(null);
         setProfile(null);
         setSession(null);
+        stopTokenRefresh();
         setLoading(false);
       }
     });
 
     return () => {
       authUnsub();
-      if (profileUnsub) profileUnsub();
+      stopTokenRefresh();
     };
-  }, [createProfileInSupabase]);
+  }, [createProfileInSupabase, startTokenRefresh, stopTokenRefresh]);
 
   const signOut = async () => {
     setLoading(true);
     try {
+      stopTokenRefresh();
       await firebaseSignOut(auth);
     } catch (e) {
       console.error("Sign out error:", e);
@@ -308,15 +371,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthCtx.Provider value={{ 
-      user, 
-      profile, 
-      session, 
-      loading, 
-      signOut, 
+    <AuthCtx.Provider value={{
+      user,
+      profile,
+      session,
+      loading,
+      signOut,
       refreshProfile,
       signupWithEmailAndPassword,
-      signInWithEmailAndPassword
+      signInWithEmail,
     }}>
       {children}
     </AuthCtx.Provider>
