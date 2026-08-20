@@ -2,7 +2,7 @@
   "id": "FEAT-008",
   "type": "feat",
   "description": "PWA manifest, service worker for offline shell caching, and meta tags for installable app experience",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create public/manifest.json - PWA manifest with: name 'Parallax', short_name 'Parallax', start_url '/', display 'standalone', background_color '#08070f', theme_color '#08070f', icons array (use placeholder sizes 192x192 and 512x512 pointing to /icons/icon-192.png and /icons/icon-512.png). Include categories ['social'].",
     "Create public/icons/ directory with simple placeholder SVG icons converted to PNG (or just reference the paths - the actual icon files can be added later). Create a minimal public/icons/icon-192.png and public/icons/icon-512.png as simple colored squares.",
@@ -24,5 +24,5 @@
     "Verify manifest.json is in dist/ after build: ls /projects/sandbox/Parallaxai/dist/manifest.json"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All acceptance criteria met. Build and all 33 tests pass. manifest.json, sw.js, and icons correctly copied to dist/. Service worker registration is conditional on web-only (not Capacitor)."
 }
