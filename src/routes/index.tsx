@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import Feed from "../pages/Feed";
 import Auth from "../pages/Auth";
 import ProfileCreation from "../pages/ProfileCreation";
+import Onboarding from "../pages/Onboarding";
 import Profile from "../pages/Profile";
 import EditProfile from "../pages/EditProfile";
 import Messages from "../pages/Messages";
@@ -27,6 +28,7 @@ export default function AppRoutes() {
       <Route path="/auth" element={<Auth />} />
       <Route element={<ProtectedRoute />}>
         <Route path="/profile-creation" element={<ProfileCreation />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route element={<AppShell />}>
           <Route path="/" element={<Feed />} />
           <Route path="/profile" element={<Profile />} />

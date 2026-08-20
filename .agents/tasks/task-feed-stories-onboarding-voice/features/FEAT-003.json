@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "feat",
   "description": "Smart Onboarding - Build a multi-step onboarding flow for new users with interest picker, creator suggestions, and profile completion. Route new users to onboarding after signup.",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Create `src/pages/Onboarding.tsx` with a multi-step onboarding flow: Step 1 'Pick 5+ interests': Display a grid of topic cards (Art, Music, Tech, Fashion, Comedy, Education, Sports, Food, Travel, Gaming, Photography, Science, Business, Health, Nature, Movies, Books, DIY, Dance, Pets). Each card is a toggleable button with an icon and label. Show count of selected interests and require minimum 5. Use motion animations (staggered fade-in). Step 2 'Follow 5+ creators': Show a list of suggested creator cards (fetch from Firestore `profiles` collection where `is_creator === true`, limit 20). Each card shows avatar, name, bio snippet, and a Follow button. Track selected count, require minimum 5. Step 3 'Complete your profile': Optional avatar upload (use uploadToCloudinary) + bio textarea. Non-blocking (can skip). Final CTA: 'Start Exploring' button.",
     "In the Onboarding page submit logic: (a) Save selected interests to `user_interests/{userId}` in Firestore with each topic getting an initial score of 1.0. (b) For each followed creator, write a follow document to Firestore `follows` collection: { follower_id: user.id, following_id: creatorId, created_at: serverTimestamp() }. (c) Update the user's profile with `onboarded_at: serverTimestamp()` and optionally avatar_url and bio if provided. (d) Navigate to '/' after completion.",

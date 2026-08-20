@@ -55,6 +55,12 @@ const Auth = () => {
       return;
     }
 
+    // If user has no interests selected, send to onboarding
+    if (!prof?.interests || (Array.isArray(prof.interests) && prof.interests.length === 0)) {
+      nav("/onboarding", { replace: true });
+      return;
+    }
+
     nav("/", { replace: true });
   };
 
