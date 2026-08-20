@@ -38,6 +38,7 @@ const Auth = () => {
   const [kind, setKind] = useState<AccountKind>("personal");
   const [handle, setHandle] = useState("");
   const [busy, setBusy] = useState(false);
+  const [authLoading, setAuthLoading] = useState(false);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -52,31 +53,36 @@ const Auth = () => {
   const form = tab === "signin" ? loginForm : signupForm;
 
   const routeForUser = async (uid: string) => {
-    if (nextPath) { nav(nextPath, { replace: true }); return; }
-
-    let prof: any = null;
+    setAuthLoading(true);
     try {
-      const profSnap = await getDoc(doc(db, "profiles", uid));
-      prof = profSnap.exists() ? profSnap.data() : null;
-    } catch (e) {
-      console.error("Error fetching profile during routing:", e);
+      if (nextPath) { nav(nextPath, { replace: true }); return; }
+
+      let prof: any = null;
+      try {
+        const profSnap = await getDoc(doc(db, "profiles", uid));
+        prof = profSnap.exists() ? profSnap.data() : null;
+      } catch (e) {
+        console.error("Error fetching profile during routing:", e);
+      }
+
+      localStorage.removeItem(ORG_INTENT_KEY);
+
+      // Profile is created during signup — only fall back if it's genuinely missing
+      if (!prof?.display_name && !prof?.username) {
+        nav("/profile-creation", { replace: true });
+        return;
+      }
+
+      // If user has no interests selected, send to onboarding
+      if (!prof?.interests || (Array.isArray(prof.interests) && prof.interests.length === 0)) {
+        nav("/onboarding", { replace: true });
+        return;
+      }
+
+      nav("/", { replace: true });
+    } finally {
+      setAuthLoading(false);
     }
-
-    localStorage.removeItem(ORG_INTENT_KEY);
-
-    // Profile is created during signup — only fall back if it's genuinely missing
-    if (!prof?.display_name && !prof?.username) {
-      nav("/profile-creation", { replace: true });
-      return;
-    }
-
-    // If user has no interests selected, send to onboarding
-    if (!prof?.interests || (Array.isArray(prof.interests) && prof.interests.length === 0)) {
-      nav("/onboarding", { replace: true });
-      return;
-    }
-
-    nav("/", { replace: true });
   };
 
   useEffect(() => { 
@@ -194,6 +200,14 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Loading Overlay */}
+      {authLoading && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
+          <p className="text-sm text-zinc-300 animate-pulse">Processing...</p>
+        </div>
+      )}
+
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
       

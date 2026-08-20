@@ -19,14 +19,20 @@ const ProfileCreation = () => {
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Check if profile already exists and redirect
   useEffect(() => {
     const checkProfile = async () => {
-      if (!user) return;
-      const snap = await getDoc(doc(db, "profiles", user.uid));
-      if (snap.exists() && (snap.data().display_name || snap.data().username)) {
-        nav("/", { replace: true });
+      setLoading(true);
+      try {
+        if (!user) return;
+        const snap = await getDoc(doc(db, "profiles", user.uid));
+        if (snap.exists() && (snap.data().display_name || snap.data().username)) {
+          nav("/", { replace: true });
+        }
+      } finally {
+        setLoading(false);
       }
     };
     checkProfile();
@@ -107,6 +113,14 @@ const ProfileCreation = () => {
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
+          <p className="text-sm text-zinc-300 animate-pulse">Loading...</p>
+        </div>
+      )}
+      
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-primary/20 blur-[120px] rounded-full pointer-events-none" />
       
       <motion.div 
