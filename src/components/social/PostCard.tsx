@@ -309,7 +309,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
               {post.media_type === "video" ? (
                 <video src={post.media_url} controls playsInline className="w-full max-h-[560px] object-cover" />
               ) : (
-                <img src={post.media_url} alt="" className="w-full max-h-[560px] object-cover" draggable={false} />
+                <img src={post.media_url} alt="" className="w-full max-h-[560px] object-cover" draggable={false} loading="lazy" />
               )}
               <DoubleTapHeart trigger={burst} />
             </div>

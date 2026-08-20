@@ -55,7 +55,7 @@ export const CollabInviteSheet = ({ open, onOpenChange }: { open: boolean; onOpe
               <div key={i.post_id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border">
                 <Link to={`/p/${i.post_id}`} onClick={() => onOpenChange(false)} className="shrink-0">
                   {i.post?.media_url ? (
-                    <img src={i.post.media_url} className="h-12 w-12 rounded-lg object-cover" alt="" />
+                    <img src={i.post.media_url} className="h-12 w-12 rounded-lg object-cover" alt="" loading="lazy" />
                   ) : (
                     <div className="h-12 w-12 rounded-lg bg-muted" />
                   )}

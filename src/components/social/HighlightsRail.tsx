@@ -35,7 +35,7 @@ export const HighlightsRail = ({ userId, isMe }: { userId: string; isMe: boolean
             <div className="h-16 w-16 rounded-full p-[2px] bg-border">
               <div className="h-full w-full rounded-full overflow-hidden bg-muted">
                 {h.cover_url ? (
-                  <img src={h.cover_url} alt="" className="h-full w-full object-cover" />
+                  <img src={h.cover_url} alt="" className="h-full w-full object-cover" loading="lazy" />
                 ) : (
                   <div className="h-full w-full grid place-items-center text-[10px] text-muted-foreground">{h.title.slice(0, 2)}</div>
                 )}

@@ -76,7 +76,7 @@ export const NewHighlightSheet = ({
                 {s.media_type === "video" ? (
                   <video src={s.media_url} muted className="w-full h-full object-cover" />
                 ) : (
-                  <img src={s.media_url} alt="" className="w-full h-full object-cover" />
+                  <img src={s.media_url} alt="" className="w-full h-full object-cover" loading="lazy" />
                 )}
                 {on && (
                   <div className="absolute top-1 right-1 h-5 w-5 rounded-full bg-primary grid place-items-center">
