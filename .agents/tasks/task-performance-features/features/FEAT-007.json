@@ -2,7 +2,7 @@
   "id": "FEAT-007",
   "type": "feat",
   "description": "i18n setup with react-i18next, English and Hindi translations, language selector in Settings",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Install react-i18next and i18next: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm install react-i18next i18next",
     "Create src/i18n/index.ts - i18next configuration with fallbackLng 'en', interpolation escapeValue false, resources loaded from locale files. Export the initialized i18n instance.",

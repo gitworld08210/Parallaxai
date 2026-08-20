@@ -1,0 +1,46 @@
+{
+  "auth": {
+    "sign_in": "Log in",
+    "sign_up": "Sign up",
+    "email": "Phone number, username or email",
+    "password": "Password",
+    "full_name": "Full name",
+    "forgot_password": "Forgot password?",
+    "or_separator": "OR",
+    "continue_google": "Continue with Google",
+    "no_account": "Don't have an account?",
+    "have_account": "Already have an account?"
+  },
+  "feed": {
+    "for_you": "For you",
+    "following": "Following",
+    "nothing_yet": "Nothing here yet",
+    "be_first": "Be the first to share something with the Aurelix community.",
+    "create_post": "Create post",
+    "discover_people": "Discover people"
+  },
+  "profile": {
+    "edit_profile": "Edit profile",
+    "followers": "Followers",
+    "following_label": "Following",
+    "posts": "Posts"
+  },
+  "settings": {
+    "settings": "Settings",
+    "account": "Account",
+    "privacy": "Privacy",
+    "your_data": "Your data",
+    "sign_out": "Sign out",
+    "language": "Language",
+    "select_language": "Select language"
+  },
+  "common": {
+    "loading": "Loading",
+    "error": "Error",
+    "try_again": "Try again",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "search": "Search"
+  }
+}

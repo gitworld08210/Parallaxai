@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Shield, KeyRound, Mail, Phone, Download, Trash2, EyeOff, Activity, UserX, Sparkles, LogOut, Building2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Shield, KeyRound, Mail, Phone, Download, Trash2, EyeOff, Activity, UserX, Sparkles, LogOut, Building2, Globe } from "lucide-react";
 import { TopBar } from "@/components/vibe/TopBar";
 import { useAuth } from "@/contexts/AuthProvider";
+import { useTranslation } from "react-i18next";
 
 const Row = ({ to, icon: Icon, title, hint, danger }: any) => (
   <Link
@@ -31,15 +32,27 @@ import { useMyWorkspaces } from "@/hooks/organization/useMyWorkspaces";
 export default function Settings() {
   const nav = useNavigate();
   const { signOut } = useAuth();
+  const { t, i18n } = useTranslation();
   const { workspaces } = useMyWorkspaces();
   // Prefer an owned workspace so the settings link deep-links into the admin
   // dashboard; otherwise fall back to any workspace the user belongs to.
   const primary = workspaces.find((w) => w.is_owner) ?? workspaces[0] ?? null;
 
+  const languages = [
+    { code: "en", label: "English" },
+    { code: "hi", label: "हिन्दी (Hindi)" },
+  ];
+
+  const currentLang = languages.find((l) => l.code === i18n.language) ?? languages[0];
+
+  const handleLanguageChange = (langCode: string) => {
+    i18n.changeLanguage(langCode);
+  };
+
   return (
     <div>
       <TopBar
-        title="Settings"
+        title={t("settings.settings")}
         right={
           <button onClick={() => nav(-1)} className="glass h-11 w-11 rounded-full grid place-items-center" aria-label="Back">
             <ChevronLeft className="h-5 w-5" />
@@ -48,7 +61,7 @@ export default function Settings() {
       />
 
       <div className="px-4 pb-24 space-y-6 max-w-xl mx-auto">
-        <Section label="Account">
+        <Section label={t("settings.account")}>
           <Row to="/profile/edit" icon={Sparkles} title="Edit profile" hint="Name, avatar, bio" />
           <Row to="/settings/password" icon={KeyRound} title="Change password" />
           <Row to="/settings/email" icon={Mail} title="Change email" />
@@ -73,21 +86,47 @@ export default function Settings() {
           <Row to="/settings/activity" icon={Activity} title="Login activity" hint="Constellation of recent sessions" />
         </Section>
 
-        <Section label="Privacy">
+        <Section label={t("settings.privacy")}>
           <Row to="/settings/privacy" icon={EyeOff} title="Privacy" hint="Private account, read receipts, presence" />
           <Row to="/settings/blocked" icon={UserX} title="Blocked accounts" />
         </Section>
 
-        <Section label="Your data">
+        <Section label={t("settings.your_data")}>
           <Row to="/settings/export" icon={Download} title="Download your archive" />
           <Row to="/settings/delete" icon={Trash2} title="Delete account" danger />
+        </Section>
+
+        <Section label={t("settings.language")}>
+          <div className="space-y-1.5">
+            {languages.map((lang) => (
+              <button
+                key={lang.code}
+                onClick={() => handleLanguageChange(lang.code)}
+                className={`flex items-center gap-3 w-full px-4 py-3.5 rounded-2xl border transition-colors ${
+                  i18n.language === lang.code
+                    ? "bg-aurum/10 border-aurum/40"
+                    : "bg-card/40 border-border/40 hover:border-aurum/40"
+                }`}
+              >
+                <div className="h-9 w-9 rounded-full grid place-items-center bg-aurum/10 text-aurum">
+                  <Globe className="h-4 w-4" />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-medium">{lang.label}</p>
+                </div>
+                {i18n.language === lang.code && (
+                  <div className="h-2 w-2 rounded-full bg-aurum" />
+                )}
+              </button>
+            ))}
+          </div>
         </Section>
 
         <button
           onClick={() => signOut()}
           className="w-full mt-4 rounded-2xl border border-border/40 bg-card/30 py-3.5 text-sm font-medium flex items-center justify-center gap-2 hover:border-aurum/40"
         >
-          <LogOut className="h-4 w-4" /> Sign out
+          <LogOut className="h-4 w-4" /> {t("settings.sign_out")}
         </button>
       </div>
     </div>

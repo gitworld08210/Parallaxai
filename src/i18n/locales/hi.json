@@ -1,0 +1,46 @@
+{
+  "auth": {
+    "sign_in": "लॉग इन",
+    "sign_up": "साइन अप",
+    "email": "फ़ोन नंबर, उपयोगकर्ता नाम या ईमेल",
+    "password": "पासवर्ड",
+    "full_name": "पूरा नाम",
+    "forgot_password": "पासवर्ड भूल गए?",
+    "or_separator": "या",
+    "continue_google": "Google से जारी रखें",
+    "no_account": "खाता नहीं है?",
+    "have_account": "पहले से खाता है?"
+  },
+  "feed": {
+    "for_you": "आपके लिए",
+    "following": "फ़ॉलोइंग",
+    "nothing_yet": "यहाँ अभी कुछ नहीं है",
+    "be_first": "Aurelix समुदाय के साथ कुछ साझा करने वाले पहले व्यक्ति बनें।",
+    "create_post": "पोस्ट बनाएँ",
+    "discover_people": "लोगों को खोजें"
+  },
+  "profile": {
+    "edit_profile": "प्रोफ़ाइल संपादित करें",
+    "followers": "फ़ॉलोअर्स",
+    "following_label": "फ़ॉलोइंग",
+    "posts": "पोस्ट"
+  },
+  "settings": {
+    "settings": "सेटिंग्स",
+    "account": "खाता",
+    "privacy": "गोपनीयता",
+    "your_data": "आपका डेटा",
+    "sign_out": "साइन आउट",
+    "language": "भाषा",
+    "select_language": "भाषा चुनें"
+  },
+  "common": {
+    "loading": "लोड हो रहा है",
+    "error": "त्रुटि",
+    "try_again": "पुनः प्रयास करें",
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "delete": "हटाएँ",
+    "search": "खोजें"
+  }
+}

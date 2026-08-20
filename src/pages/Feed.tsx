@@ -21,9 +21,11 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { gradientFor, initialsOf } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { getProfileAvatarUrl } from "@/lib/cloudinary";
+import { useTranslation } from "react-i18next";
 
 const Feed = () => {
   const { user, profile } = useAuth();
+  const { t } = useTranslation();
   const [tab, setTab] = useState<"foryou" | "following">("foryou");
   const [rankedPosts, setRankedPosts] = useState<FeedPost[]>([]);
   const [commentPost, setCommentPost] = useState<string | null>(null);
@@ -180,23 +182,23 @@ const Feed = () => {
         {/* X-style tabs — animated underline with layoutId */}
         <div role="tablist" className="grid grid-cols-2">
           {[
-            { id: "foryou", label: "For you" },
-            { id: "following", label: "Following" },
-          ].map((t: any) => {
-            const active = tab === t.id;
+            { id: "foryou", label: t("feed.for_you") },
+            { id: "following", label: t("feed.following") },
+          ].map((item: any) => {
+            const active = tab === item.id;
             return (
               <button
-                key={t.id}
+                key={item.id}
                 role="tab"
                 aria-selected={active}
-                onClick={() => setTab(t.id)}
+                onClick={() => setTab(item.id)}
                 className={cn(
                   "relative h-12 text-[15px] font-semibold transition-colors hover:bg-secondary/40",
                   active ? "text-foreground" : "text-muted-foreground",
                 )}
               >
                 <span className="relative inline-flex h-full items-center justify-center">
-                  {t.label}
+                  {item.label}
                   {active && (
                     <motion.span
                       layoutId="feed-tab-underline"
@@ -226,17 +228,17 @@ const Feed = () => {
           tab === "following" ? (
             <EmptyState
               icon={Users}
-              title="Your following feed is empty"
-              subtitle="Follow people you find interesting to see their posts here."
-              cta={{ label: "Discover people", to: "/discover" }}
+              title={t("feed.nothing_yet")}
+              subtitle={t("feed.discover_people")}
+              cta={{ label: t("feed.discover_people"), to: "/discover" }}
               size="lg"
             />
           ) : (
             <EmptyState
               icon={Sparkles}
-              title="Nothing here yet"
-              subtitle="Be the first to share something with the Aurelix community."
-              cta={{ label: "Create post", to: "/compose" }}
+              title={t("feed.nothing_yet")}
+              subtitle={t("feed.be_first")}
+              cta={{ label: t("feed.create_post"), to: "/compose" }}
               size="lg"
             />
           )
