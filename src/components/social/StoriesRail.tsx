@@ -6,8 +6,9 @@ import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 import { useAuth } from "@/contexts/AuthProvider";
-import { gradientFor, initialsOf } from "@/lib/format";
+import { initialsOf } from "@/lib/format";
 import { StoryViewer } from "./StoryViewer";
+import { StoryRing } from "./StoryRing";
 
 type StoryRow = {
   id: string;
@@ -86,17 +87,13 @@ export const StoriesRail = () => {
               onClick={() => setViewingIdx(startIdx)}
               className="flex flex-col items-center gap-1 shrink-0 w-16"
             >
-              <div className="h-16 w-16 rounded-full p-[2px]" style={{ background: "conic-gradient(from 180deg, hsl(244 80% 60%), hsl(262 85% 68%), hsl(300 85% 65%), hsl(244 80% 60%))" }}>
-                <div className="h-full w-full rounded-full bg-background p-[2px]">
-                  {g.profile?.avatar_url ? (
-                    <img src={g.profile.avatar_url} className="h-full w-full rounded-full object-cover" alt="" />
-                  ) : (
-                    <div className="h-full w-full rounded-full grid place-items-center text-xs font-semibold text-primary-foreground" style={{ backgroundImage: gradientFor(g.profile?.username) }}>
-                      {initialsOf(g.profile?.display_name || g.profile?.username || "?")}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <StoryRing
+                avatarUrl={g.profile?.avatar_url || null}
+                username={g.profile?.username || ""}
+                displayName={g.profile?.display_name || ""}
+                hasUnseen={true}
+                size="md"
+              />
               <span className="text-[11px] truncate w-full text-center text-foreground">{g.profile?.username ?? "user"}</span>
             </button>
           );

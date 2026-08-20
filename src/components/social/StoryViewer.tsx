@@ -3,10 +3,9 @@ import { X, Send } from "lucide-react";
 import { timeAgo } from "@/lib/format";
 
 import { useAuth } from "@/contexts/AuthProvider";
-import { supabase } from "@/integrations/supabase/client";
 import { StoryStickersLayer } from "@/components/social/StoryStickersLayer";
 import { toast } from "sonner";
-import { collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, updateDoc, arrayUnion } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 type Story = {
@@ -30,6 +29,12 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
 
   useEffect(() => {
     setProgress(0);
+    // Track viewer
+    if (current && user?.uid && current.user_id !== user.uid) {
+      updateDoc(doc(db, "stories", current.id), {
+        viewers: arrayUnion(user.uid),
+      }).catch(() => {});
+    }
     if (paused) return;
     const duration = current?.media_type === "video" ? 12000 : 5000;
     const start = Date.now();
@@ -56,10 +61,14 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
 
   const react = async (emoji: string) => {
     if (!user) return toast.error("Sign in");
-    const { error } = await supabase.from("story_reactions").insert({
-      story_id: current.id, user_id: user.uid, emoji
-    });
-    if (error) toast.error(error.message); else toast.success(`Reacted ${emoji}`);
+    try {
+      await updateDoc(doc(db, "stories", current.id), {
+        reactions: arrayUnion({ user_id: user.uid, emoji, created_at: new Date().toISOString() }),
+      });
+      toast.success(`Reacted ${emoji}`);
+    } catch (err: any) {
+      toast.error(err.message || "Reaction failed");
+    }
   };
 
   const sendReply = async () => {

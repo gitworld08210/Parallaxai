@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Feed Algorithm / Interest Engine - Build a basic interest-tracking and feed ranking system using Firestore. Create an interest engine service that tracks user engagement signals, maintains user interest vectors, and ranks the For You feed by predicted engagement.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create `src/services/interestEngine.ts` with the following exports: (a) `trackEngagement(userId, postId, signal, topicTags)` - writes engagement events to Firestore `engagement_events/{eventId}` with fields: user_id, post_id, signal_type (watch_time|like|save|share|profile_visit), topic_tags[], timestamp. (b) `updateInterestVector(userId, topic, delta)` - updates `user_interests/{userId}` document which stores a map of topic->score (number). On like/save/share of a post tagged with 'art', increment user's 'art' affinity by delta. (c) `getInterestVector(userId)` - reads `user_interests/{userId}` and returns the topic scores map. (d) `scorePosts(posts, userInterests)` - pure function that takes an array of posts (with topic_tags field) and a user interest vector, returns posts sorted by: content_topic_match * recency_factor * engagement_velocity. content_topic_match = sum of matching topic scores normalized. recency_factor = 1 / (1 + hours_since_post / 24). engagement_velocity = (like_count + comment_count * 2) / max(1, hours_since_post).",
     "Create `src/hooks/useInterestTracking.ts` that exports a `useInterestTracking()` hook. It should: (a) Accept no arguments but use `useAuth()` to get current user. (b) Expose `trackLike(postId, topicTags)`, `trackSave(postId, topicTags)`, `trackShare(postId, topicTags)`, `trackProfileVisit(profileUserId)` functions that call `trackEngagement` and `updateInterestVector` from the service. (c) Use useCallback to memoize handlers.",
@@ -21,5 +21,5 @@
     "npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All 4 steps implemented and verified. Build passes cleanly. All 5 tests pass (4 new scorePosts tests + 1 existing). The scorePosts function uses a base score of 0.1 for posts with no matching topics so they still appear in results."
 }
