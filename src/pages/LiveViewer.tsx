@@ -1,26 +1,45 @@
-import { supabase } from '@/integrations/supabase/client';
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Room, RoomEvent, RemoteTrack, Track } from "livekit-client";
+import {
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  increment,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  updateDoc,
+  where,
+  limit,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/contexts/AuthProvider";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { ArrowLeft, Heart, Send, Users, Ticket, Crown, Gift, Lock } from "lucide-react";
+import { GiftOverlay } from "@/components/live/GiftOverlay";
+import { TopGifters } from "@/components/live/TopGifters";
 
 type ChatRow = { id: string; user_id: string; body: string; created_at: string };
 type Stream = {
   id: string; host_id: string; livekit_room: string; title: string | null;
   status: string; access_type: "free" | "ticket" | "subscribers_only";
-  ticket_price_coins: number; allow_gifts: boolean; total_tips_coins: number;
+  ticket_price_coins: number; allow_gifts: boolean; total_gifts: number;
 };
 type GiftDef = { id: string; name: string; icon: string; cost_coins: number };
-type GiftEvent = { id: string; gift_id: string; coins_total: number; sender_id: string; };
+type GiftEvent = { id: string; gift_id: string; coins_total: number; sender_id: string };
 
 export default function LiveViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const roomRef = useRef<Room | null>(null);
@@ -29,19 +48,29 @@ export default function LiveViewer() {
   const [text, setText] = useState("");
   const [hearts, setHearts] = useState<{ id: number }[]>([]);
   const [gifts, setGifts] = useState<GiftEvent[]>([]);
-  const [flying, setFlying] = useState<{ key: number; icon: string }[]>([]);
+  const [flying, setFlying] = useState<{ id: string; icon: string; key: number }[]>([]);
   const [ended, setEnded] = useState(false);
-  const [me, setMe] = useState<string | null>(null);
-  const [access, setAccess] = useState<"loading" | "granted" | "needs_ticket" | "needs_sub">("loading");
+  const [accessState, setAccessState] = useState<"loading" | "granted" | "needs_ticket" | "needs_sub">("loading");
   const [catalog, setCatalog] = useState<GiftDef[]>([]);
   const [giftSheet, setGiftSheet] = useState(false);
   const [buying, setBuying] = useState(false);
   const [tips, setTips] = useState(0);
 
+  const me = user?.id ?? null;
+
+  // Load gift catalog from Firestore
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("gift_catalog" as any).select("*");
-      setCatalog((data ?? []) as GiftDef[]);
+      try {
+        const snap = await getDocs(collection(db, "gift_catalog"));
+        const items: GiftDef[] = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        })) as GiftDef[];
+        setCatalog(items);
+      } catch (e) {
+        console.warn("Could not load gift catalog", e);
+      }
     })();
   }, []);
 
@@ -49,75 +78,132 @@ export default function LiveViewer() {
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const { data, error } = await supabase.from("live_streams" as any).select("*").eq("id", id).maybeSingle();
-      if (error || !data) { toast.error("Stream not found"); navigate(-1); return; }
-      const s = data as any as Stream;
-      setStream(s);
-      setTips(Number(s.total_tips_coins ?? 0));
-      if (s.status === "ended") { setEnded(true); return; }
+      try {
+        const streamSnap = await getDoc(doc(db, "live_streams", id));
+        if (!streamSnap.exists()) { toast.error("Stream not found"); navigate(-1); return; }
+        const s = { id: streamSnap.id, ...streamSnap.data() } as Stream;
+        setStream(s);
+        setTips(Number(s.total_gifts ?? 0));
+        if (s.status === "ended") { setEnded(true); return; }
 
-      const { data: u } = await supabase.auth.getUser();
-      const uid = u.user?.id;
-      setMe(uid ?? null);
-      if (uid && s.host_id === uid) { setAccess("granted"); return; }
-      if (s.access_type === "free") { setAccess("granted"); return; }
-      if (!uid) { setAccess(s.access_type === "ticket" ? "needs_ticket" : "needs_sub"); return; }
+        if (me && s.host_id === me) { setAccessState("granted"); return; }
+        if (s.access_type === "free") { setAccessState("granted"); return; }
+        if (!me) { setAccessState(s.access_type === "ticket" ? "needs_ticket" : "needs_sub"); return; }
 
-      if (s.access_type === "ticket") {
-        const { data: t } = await supabase.from("live_tickets" as any).select("id").eq("stream_id", s.id).eq("user_id", uid).maybeSingle();
-        setAccess(t ? "granted" : "needs_ticket");
-      } else if (s.access_type === "subscribers_only") {
-        const { data: sub } = await supabase.from("creator_subscriptions" as any).select("status").eq("subscriber_id", uid).eq("creator_id", s.host_id).maybeSingle();
-        const active = sub && ["active", "trialing"].includes(String((sub as any).status));
-        setAccess(active ? "granted" : "needs_sub");
+        if (s.access_type === "ticket") {
+          const ticketQ = query(
+            collection(db, "live_tickets"),
+            where("stream_id", "==", s.id),
+            where("user_id", "==", me)
+          );
+          const ticketSnap = await getDocs(ticketQ);
+          setAccessState(ticketSnap.docs.length > 0 ? "granted" : "needs_ticket");
+        } else if (s.access_type === "subscribers_only") {
+          const subQ = query(
+            collection(db, "creator_subscriptions"),
+            where("subscriber_id", "==", me),
+            where("creator_id", "==", s.host_id),
+            where("status", "in", ["active", "trialing"])
+          );
+          const subSnap = await getDocs(subQ);
+          setAccessState(subSnap.docs.length > 0 ? "granted" : "needs_sub");
+        }
+      } catch (e: any) {
+        toast.error("Could not load stream");
+        navigate(-1);
       }
     })();
-  }, [id, navigate]);
+  }, [id, navigate, me]);
 
-  // Connect livekit once access is granted
+  // Connect LiveKit once access is granted (graceful fallback)
   useEffect(() => {
-    if (!stream || access !== "granted" || ended) return;
+    if (!stream || accessState !== "granted" || ended) return;
     let mounted = true;
+
     (async () => {
-      const { data, error: tErr } = await supabase.functions.invoke("livekit-token", {
-        body: { room: stream.livekit_room, role: "viewer" },
-      });
-      if (tErr || !data?.token) { toast.error("Could not join"); return; }
-      const room = new Room();
-      room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
-        if (track.kind === Track.Kind.Video && videoRef.current) track.attach(videoRef.current);
-        if (track.kind === Track.Kind.Audio && audioRef.current) track.attach(audioRef.current);
-      });
-      room.on(RoomEvent.Disconnected, () => mounted && setEnded(true));
-      await room.connect(data.wsUrl, data.token);
-      roomRef.current = room;
+      try {
+        const tokenUrl = import.meta.env.VITE_LIVEKIT_TOKEN_URL;
+        if (!tokenUrl) {
+          console.warn("No VITE_LIVEKIT_TOKEN_URL configured. Video stream not available.");
+          return;
+        }
+        const res = await fetch(tokenUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ room: stream.livekit_room, role: "viewer", user_id: me }),
+        });
+        if (!res.ok) throw new Error("Token service unavailable");
+        const data = await res.json();
+        if (!data.token || !data.wsUrl) throw new Error("Invalid token response");
 
-      const { data: history } = await supabase.from("live_chat" as any).select("*").eq("stream_id", stream.id).order("created_at", { ascending: true }).limit(100);
-      if (history && mounted) setChat(history as unknown as ChatRow[]);
-
+        const room = new Room();
+        room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
+          if (track.kind === Track.Kind.Video && videoRef.current) track.attach(videoRef.current);
+          if (track.kind === Track.Kind.Audio && audioRef.current) track.attach(audioRef.current);
+        });
+        room.on(RoomEvent.Disconnected, () => mounted && setEnded(true));
+        await room.connect(data.wsUrl, data.token);
+        roomRef.current = room;
+      } catch (lkErr) {
+        console.warn("LiveKit connection not available:", lkErr);
+      }
     })();
-    return () => { mounted = false; roomRef.current?.disconnect(); roomRef.current = null; };
-  }, [access, stream?.id, ended]);
 
-  // Realtime: chat, reactions, gifts, stream status
+    return () => { mounted = false; roomRef.current?.disconnect(); roomRef.current = null; };
+  }, [accessState, stream?.id, ended]);
+
+  // Real-time: chat, gifts, stream status via Firestore onSnapshot
   useEffect(() => {
     if (!id) return;
-      supabase.channel(`live:${id}`).
-on("postgres_changes", { event: "INSERT", schema: "public", table: "live_chat", filter: `stream_id=eq.${id}` },
-        (p) => setChat((c) => [...c.slice(-50), p.new as ChatRow])).
-on("postgres_changes", { event: "INSERT", schema: "public", table: "live_reactions", filter: `stream_id=eq.${id}` },
-        () => setHearts((h) => [...h, { id: Date.now() + Math.random() }])).
-on("postgres_changes", { event: "INSERT", schema: "public", table: "live_gifts", filter: `stream_id=eq.${id}` },
-        (p) => {
-          const g = p.new as GiftEvent;
-          setGifts((arr) => [g, ...arr].slice(0, 8));
-          setTips((t) => t + Number(g.coins_total || 0));
-          const def = catalog.find((c) => c.id === g.gift_id);
-          if (def) setFlying((f) => [...f, { key: Date.now() + Math.random(), icon: def.icon }]);
-        }).
-on("postgres_changes", { event: "UPDATE", schema: "public", table: "live_streams", filter: `id=eq.${id}` },
-        (p) => { if ((p.new as any).status === "ended") setEnded(true); }).
-subscribe();
+    const unsubs: (() => void)[] = [];
+
+    // Chat listener
+    const chatQ = query(
+      collection(db, "live_chat"),
+      where("stream_id", "==", id),
+      orderBy("created_at", "asc"),
+      limit(100)
+    );
+    unsubs.push(
+      onSnapshot(chatQ, (snap) => {
+        const msgs: ChatRow[] = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        })) as ChatRow[];
+        setChat(msgs.slice(-50));
+      })
+    );
+
+    // Gifts listener
+    const giftsQ = query(
+      collection(db, "live_gifts"),
+      where("stream_id", "==", id),
+      orderBy("created_at", "desc"),
+      limit(20)
+    );
+    unsubs.push(
+      onSnapshot(giftsQ, (snap) => {
+        const allGifts: GiftEvent[] = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        })) as GiftEvent[];
+        setGifts(allGifts.slice(0, 8));
+        const totalCoins = allGifts.reduce((sum, g) => sum + Number(g.coins_total || 0), 0);
+        setTips(totalCoins);
+      })
+    );
+
+    // Stream doc listener (detect ended + viewer count)
+    unsubs.push(
+      onSnapshot(doc(db, "live_streams", id), (snap) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.status === "ended") setEnded(true);
+        }
+      })
+    );
+
+    return () => unsubs.forEach((u) => u());
   }, [id, catalog]);
 
   useEffect(() => {
@@ -125,6 +211,7 @@ subscribe();
     const t = setTimeout(() => setHearts((h) => h.slice(1)), 2500);
     return () => clearTimeout(t);
   }, [hearts]);
+
   useEffect(() => {
     if (!flying.length) return;
     const t = setTimeout(() => setFlying((f) => f.slice(1)), 2200);
@@ -135,37 +222,86 @@ subscribe();
     if (!text.trim() || !id || !me) return;
     const body = text.trim();
     setText("");
+    try {
+      await addDoc(collection(db, "live_chat"), {
+        stream_id: id,
+        user_id: me,
+        body,
+        created_at: serverTimestamp(),
+      });
+    } catch (e) {
+      console.warn("Failed to send chat message", e);
+    }
   };
+
   const sendHeart = async () => {
     if (!id || !me) return;
+    setHearts((h) => [...h, { id: Date.now() + Math.random() }]);
   };
 
   const buyTicket = async () => {
-    if (!stream) return;
+    if (!stream || !me) return;
     setBuying(true);
     try {
-      const { data, error } = await supabase.functions.invoke("buy-live-ticket", { body: { stream_id: stream.id } });
-      if (error || (data as any)?.error) throw new Error((data as any)?.error || error?.message);
-      toast.success("Unlocked ✦");
-      setAccess("granted");
+      // Deduct from viewer wallet
+      const walletRef = doc(db, "wallets", me);
+      const walletSnap = await getDoc(walletRef);
+      const currentBalance = walletSnap.exists() ? (walletSnap.data().total || 0) : 0;
+      if (currentBalance < stream.ticket_price_coins) {
+        toast.error("Not enough coins - top up in Wallet");
+        return;
+      }
+      await updateDoc(walletRef, { total: increment(-stream.ticket_price_coins) });
+      // Credit host wallet
+      await updateDoc(doc(db, "wallets", stream.host_id), { total: increment(stream.ticket_price_coins) });
+      // Create ticket record
+      await addDoc(collection(db, "live_tickets"), {
+        stream_id: stream.id,
+        user_id: me,
+        coins_paid: stream.ticket_price_coins,
+        created_at: serverTimestamp(),
+      });
+      toast.success("Unlocked!");
+      setAccessState("granted");
     } catch (e: any) {
       const msg = e.message || "Purchase failed";
-      if (/insufficient/i.test(msg)) toast.error("Not enough coins — top up in Wallet");
+      if (/insufficient/i.test(msg)) toast.error("Not enough coins - top up in Wallet");
       else toast.error(msg);
     } finally { setBuying(false); }
   };
 
   const sendGift = async (g: GiftDef) => {
-    if (!stream) return;
+    if (!stream || !me) return;
     setGiftSheet(false);
-    const { data, error } = await supabase.functions.invoke("send-live-gift", { body: { stream_id: stream.id, gift_id: g.id } });
-    if (error || (data as any)?.error) {
-      const msg = (data as any)?.error || error?.message || "Gift failed";
-      if (/insufficient/i.test(msg)) toast.error("Not enough coins — top up in Wallet");
+    try {
+      // Deduct from viewer wallet
+      const viewerWalletRef = doc(db, "wallets", me);
+      const viewerSnap = await getDoc(viewerWalletRef);
+      const currentBalance = viewerSnap.exists() ? (viewerSnap.data().total || 0) : 0;
+      if (currentBalance < g.cost_coins) {
+        toast.error("Not enough coins - top up in Wallet");
+        return;
+      }
+      await updateDoc(viewerWalletRef, { total: increment(-g.cost_coins) });
+      // Credit host wallet
+      await updateDoc(doc(db, "wallets", stream.host_id), { total: increment(g.cost_coins) });
+      // Record the gift event
+      await addDoc(collection(db, "live_gifts"), {
+        stream_id: stream.id,
+        gift_id: g.id,
+        sender_id: me,
+        coins_total: g.cost_coins,
+        created_at: serverTimestamp(),
+      });
+      // Increment stream total_gifts
+      await updateDoc(doc(db, "live_streams", stream.id), { total_gifts: increment(g.cost_coins) });
+      // Local animation
+      setFlying((f) => [...f, { id: g.id, icon: g.icon, key: Date.now() + Math.random() }]);
+    } catch (e: any) {
+      const msg = e.message || "Gift failed";
+      if (/insufficient/i.test(msg)) toast.error("Not enough coins - top up in Wallet");
       else toast.error(msg);
-      return;
     }
-    setFlying((f) => [...f, { key: Date.now() + Math.random(), icon: g.icon }]);
   };
 
   if (ended) {
@@ -177,12 +313,12 @@ subscribe();
     );
   }
 
-  if (access === "loading" || !stream) {
-    return <div className="min-h-screen bg-black text-white grid place-items-center">Loading…</div>;
+  if (accessState === "loading" || !stream) {
+    return <div className="min-h-screen bg-black text-white grid place-items-center">Loading...</div>;
   }
 
-  if (access !== "granted") {
-    const isTicket = access === "needs_ticket";
+  if (accessState !== "granted") {
+    const isTicket = accessState === "needs_ticket";
     return (
       <div className="min-h-screen bg-black text-white flex flex-col">
         <div className="p-4">
@@ -201,10 +337,10 @@ subscribe();
               <>
                 <div className="mt-6 bg-white/10 rounded-2xl px-5 py-4 flex items-center justify-between">
                   <span className="text-sm text-white/70">Ticket price</span>
-                  <span className="text-2xl font-black">🪙 {stream.ticket_price_coins}</span>
+                  <span className="text-2xl font-black">{stream.ticket_price_coins}</span>
                 </div>
                 <Button onClick={buyTicket} disabled={buying || !me} className="w-full mt-4 h-12 text-base gap-2">
-                  <Lock className="h-4 w-4" /> {buying ? "Unlocking…" : `Unlock live for ${stream.ticket_price_coins} coins`}
+                  <Lock className="h-4 w-4" /> {buying ? "Unlocking..." : `Unlock live for ${stream.ticket_price_coins} coins`}
                 </Button>
                 <Link to="/wallet?buy=1" className="block mt-3 text-xs text-white/60 underline">Top up coins</Link>
               </>
@@ -242,6 +378,11 @@ subscribe();
         <div />
       </div>
 
+      {/* Top gifters */}
+      <div className="relative z-10 px-4 mt-1">
+        <TopGifters gifts={gifts} maxDisplay={3} />
+      </div>
+
       {gifts.length > 0 && (
         <div className="relative z-10 px-4 flex gap-2 overflow-x-auto pb-2">
           {gifts.map((g) => {
@@ -267,7 +408,7 @@ subscribe();
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
-          placeholder="Say something…"
+          placeholder="Say something..."
           className="bg-white/10 border-white/20 rounded-full text-white placeholder:text-white/60"
         />
         <button onClick={send} className="bg-white/10 rounded-full p-3"><Send className="w-5 h-5" /></button>
@@ -279,15 +420,12 @@ subscribe();
         )}
       </div>
 
+      {/* Gift overlay animation */}
+      <GiftOverlay gifts={flying} />
+
       <div className="pointer-events-none absolute inset-x-0 bottom-20">
         {hearts.map((h) => (
           <Heart key={h.id} className="absolute right-8 text-red-500 fill-red-500 animate-[float_2.5s_ease-out_forwards]" />
-        ))}
-        {flying.map((f) => (
-          <span key={f.key} className="absolute text-4xl animate-[float_2.2s_ease-out_forwards]"
-            style={{ left: `${20 + Math.random() * 60}%` }}>
-            {f.icon}
-          </span>
         ))}
       </div>
 
@@ -304,7 +442,7 @@ subscribe();
                 className="rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 p-3 flex flex-col items-center gap-1 active:scale-95 transition">
                 <span className="text-3xl">{g.icon}</span>
                 <span className="text-[10px] text-white/70">{g.name}</span>
-                <span className="text-xs font-bold text-yellow-400">🪙 {g.cost_coins}</span>
+                <span className="text-xs font-bold text-yellow-400">{g.cost_coins}</span>
               </button>
             ))}
           </div>

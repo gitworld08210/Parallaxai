@@ -2,7 +2,7 @@
   "id": "FEAT-005",
   "type": "feat",
   "description": "Live Streaming with Gifts - Make LiveHost.tsx and LiveViewer.tsx functional using Firebase Firestore for stream data, gifts, and wallet operations. Currently they use Supabase for live_streams, live_chat, live_gifts, and livekit-token. Rewrite to use Firebase for data storage while keeping LiveKit integration for actual streaming (token generation can remain as a placeholder since it needs a backend). Add gift overlay animation and top gifters list.",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "1. Rewrite src/pages/LiveHost.tsx to use Firebase Firestore: (a) Replace supabase.from('live_streams').insert() with addDoc(collection(db, 'live_streams'), {...}) using schema {host_id, title, status: 'live', livekit_room, access_type, ticket_price_coins, allow_gifts, viewer_count: 0, total_gifts: 0, started_at: serverTimestamp()}. (b) The livekit-token invoke can stay as a placeholder (log a warning that LiveKit server token is not available in dev). For dev/demo purposes, show the camera preview locally without actually connecting to LiveKit (skip the room.connect if no token available). (c) Replace supabase.channel realtime subscriptions with Firestore onSnapshot listeners on live_chat and live_gifts sub-collections or filtered queries. (d) Replace supabase.from('gifts').select for catalog with a Firestore 'gift_catalog' collection query. (e) On stream end, updateDoc to set status: 'ended'.",
     "2. Rewrite src/pages/LiveViewer.tsx to use Firebase Firestore: (a) Load stream from Firestore 'live_streams' collection by ID. (b) Replace supabase-based access checks with Firestore reads. (c) Gift sending: When viewer sends a gift, deduct coins from wallets/{viewerId}.total (increment negative), credit wallets/{hostId}.total (increment positive), write to 'live_gifts/{id}' with {stream_id, gift_id, sender_id, coins_total, created_at}. Also increment live_streams/{id}.total_gifts. (d) Use onSnapshot for real-time chat and gifts instead of supabase.channel. (e) LiveKit connection can remain as placeholder (show stream status without actual video if no token).",
@@ -27,5 +27,5 @@
     "npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All three live pages (LiveHost, LiveViewer, LiveList) successfully rewritten from Supabase to Firebase Firestore. LiveKit token fetch uses VITE_LIVEKIT_TOKEN_URL env var with graceful fallback (local camera preview only). GiftOverlay and TopGifters components created. Build and all 33 tests pass."
 }

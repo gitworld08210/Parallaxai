@@ -1,24 +1,57 @@
-import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import { Radio } from "lucide-react";
 
-type Stream = { id: string; title: string | null; host_id: string; started_at: string };
+type Stream = { id: string; title: string | null; host_id: string; started_at: any; viewer_count?: number };
+type StreamWithProfile = Stream & { username?: string; avatar_url?: string };
 
 export default function LiveList() {
   const navigate = useNavigate();
-  const [streams, setStreams] = useState<(Stream & { username?: string; avatar_url?: string })[]>([]);
+  const [streams, setStreams] = useState<StreamWithProfile[]>([]);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("live_streams").select("id,title,host_id,started_at").eq("status", "live").order("started_at", { ascending: false });
-      if (!data) return;
-      const ids = data.map((s) => s.host_id);
-      const { data: profs } = await supabase.from("profiles").select("id,username,avatar_url").in("id", ids);
-      const map = new Map(profs?.map((p: any) => [p.id, p]) ?? []);
-      setStreams(data.map((s) => ({ ...s, ...(map.get(s.host_id) as any) })));
+      try {
+        const q = query(
+          collection(db, "live_streams"),
+          where("status", "==", "live"),
+          orderBy("started_at", "desc")
+        );
+        const snap = await getDocs(q);
+        const rawStreams: Stream[] = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        })) as Stream[];
+
+        // Fetch host profiles
+        const enriched: StreamWithProfile[] = await Promise.all(
+          rawStreams.map(async (s) => {
+            try {
+              const profSnap = await getDoc(doc(db, "profiles", s.host_id));
+              if (profSnap.exists()) {
+                const profData = profSnap.data();
+                return { ...s, username: profData.username, avatar_url: profData.avatar_url };
+              }
+            } catch { /* noop */ }
+            return s;
+          })
+        );
+        setStreams(enriched);
+      } catch (e) {
+        console.warn("Could not load live streams", e);
+      }
     })();
   }, []);
 
@@ -40,6 +73,9 @@ export default function LiveList() {
             <div className="text-white">
               <p className="font-semibold truncate">@{s.username || "user"}</p>
               {s.title && <p className="text-xs opacity-80 truncate">{s.title}</p>}
+              {typeof s.viewer_count === "number" && s.viewer_count > 0 && (
+                <p className="text-[10px] opacity-60">{s.viewer_count} watching</p>
+              )}
             </div>
           </Link>
         ))}
