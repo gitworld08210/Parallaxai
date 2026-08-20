@@ -2,7 +2,7 @@
   "id": "FEAT-006",
   "type": "feat",
   "description": "Client-side rate limiting utilities with toast feedback, applied to social interactions (follow, like, DM, post, auth)",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "Create src/lib/rateLimit.ts - exports: createRateLimiter(key: string, maxActions: number, windowMs: number) that returns { check(): { allowed: boolean; retryAfterMs: number } }. Uses an in-memory map of timestamps per key. Also export preset limiters: followLimiter (30/60000), likeLimiter (60/60000), dmLimiter (20/60000), postLimiter (5/60000), authLimiter (5/60000). Export a helper: checkRateLimit(limiter, actionName?: string): boolean that shows a toast 'Slow down! Try again in X seconds' when blocked and returns false.",
     "Update src/components/social/PostCard.tsx - wrap toggleLike with rate limit check using likeLimiter before proceeding",
@@ -25,5 +25,5 @@
     "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Implementation straightforward. Rate limiting uses in-memory Map of timestamps with sliding window. All 33 existing tests pass. Build produces rateLimit chunk at 0.57KB gzipped."
 }
