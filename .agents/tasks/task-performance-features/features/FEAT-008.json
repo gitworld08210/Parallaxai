@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-008",
+  "type": "feat",
+  "description": "PWA manifest, service worker for offline shell caching, and meta tags for installable app experience",
+  "status": "pending",
+  "steps": [
+    "Create public/manifest.json - PWA manifest with: name 'Parallax', short_name 'Parallax', start_url '/', display 'standalone', background_color '#08070f', theme_color '#08070f', icons array (use placeholder sizes 192x192 and 512x512 pointing to /icons/icon-192.png and /icons/icon-512.png). Include categories ['social'].",
+    "Create public/icons/ directory with simple placeholder SVG icons converted to PNG (or just reference the paths - the actual icon files can be added later). Create a minimal public/icons/icon-192.png and public/icons/icon-512.png as simple colored squares.",
+    "Update index.html - add <link rel='manifest' href='/manifest.json'>, <link rel='apple-touch-icon' href='/icons/icon-192.png'>, ensure theme-color meta is '#08070f' (already exists, verify).",
+    "Create public/sw.js - basic service worker that caches the app shell (index.html, main CSS, main JS) on install event. On fetch, serve from cache first for navigation requests, falling back to network. Use a versioned cache name like 'parallax-v1'.",
+    "Update src/main.tsx - register the service worker conditionally: only when 'serviceWorker' in navigator AND not running in Capacitor native shell (check window.Capacitor). Register '/sw.js' in a non-blocking way (after app renders)."
+  ],
+  "acceptance_criteria": [
+    "public/manifest.json exists with correct PWA properties",
+    "index.html has manifest link and apple-touch-icon",
+    "public/sw.js implements basic cache-first for app shell",
+    "Service worker registration in main.tsx only runs on web (not native)",
+    "Build completes without errors",
+    "All existing tests pass"
+  ],
+  "verification": [
+    "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run build",
+    "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run test",
+    "Verify manifest.json is in dist/ after build: ls /projects/sandbox/Parallaxai/dist/manifest.json"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Image compression before upload and Cloudinary URL transformation helpers for optimized delivery",
+  "status": "pending",
+  "steps": [
+    "Create src/lib/imageCompression.ts - client-side image compression using Canvas API: function compressImage(file: File, options?: { maxWidth?: number; quality?: number }): Promise<Blob>. Default maxWidth=1080, quality=0.8. Creates an offscreen canvas, draws the image scaled down, exports as JPEG blob. Skip compression for files already under 100KB or non-image types.",
+    "Update src/lib/cloudinary.ts - add URL transformation helpers: getOptimizedUrl(url: string, options?: { width?: number; quality?: string; format?: string }): string. This should parse the Cloudinary URL and insert transformation parameters (w_, q_, f_auto). Add preset functions: getThumbnailUrl(url, size=150), getFeedImageUrl(url, width=1080), getProfileAvatarUrl(url, size=200).",
+    "Update src/components/social/PostCard.tsx - use getFeedImageUrl() for post images instead of raw media_url. Use getProfileAvatarUrl() for avatar images.",
+    "Update src/pages/Feed.tsx, src/pages/Discover.tsx - use getProfileAvatarUrl() for avatar images in these pages",
+    "Update the uploadToCloudinary function in src/lib/cloudinary.ts to compress images before upload by calling compressImage() on image files"
+  ],
+  "acceptance_criteria": [
+    "compressImage function resizes images to max 1080px width and compresses to 80% JPEG quality",
+    "getOptimizedUrl correctly transforms Cloudinary URLs with width/quality/format params",
+    "PostCard uses optimized URLs for images",
+    "Images are compressed before upload to Cloudinary",
+    "Build completes without errors",
+    "All existing tests pass"
+  ],
+  "verification": [
+    "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run build",
+    "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Infinite scroll with cursor-based Firestore pagination for Feed, Discover, and Reels pages using IntersectionObserver",
+  "status": "pending",
+  "steps": [
+    "Create src/hooks/useInfiniteFirestore.ts - a reusable hook that accepts a Firestore query builder, page size, and order field. It should use startAfter() with the last document snapshot for cursor-based pagination. Returns { data, loading, hasMore, loadMore, refresh }. Use useRef to store the last document snapshot for startAfter cursor.",
+    "Modify src/pages/Feed.tsx - replace the single getDocs(limit(10)) call with useInfiniteFirestore. Add an IntersectionObserver sentinel div at the bottom of the posts list that triggers loadMore. Show a loading spinner (a simple animated div with tailwind) at the bottom when fetching. Add pull-to-refresh: detect touchstart/touchmove at top of scroll container and call refresh().",
+    "Modify src/pages/Discover.tsx - paginate the profiles query using useInfiniteFirestore. Add a sentinel div at the bottom of the 'All creators' section to load more profiles.",
+    "Modify src/pages/Reels.tsx - use useInfiniteFirestore for reels loading. When the user approaches the last few reels in the snap-scroll container, load more.",
+    "Create a simple LoadingSpinner component at src/components/ui/loading-spinner.tsx - a small spinning circle using tailwind animate-spin for use as the bottom-of-feed indicator"
+  ],
+  "acceptance_criteria": [
+    "Feed.tsx uses cursor-based pagination and loads more posts on scroll",
+    "Discover.tsx paginates the profiles list",
+    "Reels.tsx loads more reels as user scrolls",
+    "A loading spinner appears at the bottom when fetching more",
+    "Pull-to-refresh gesture works on Feed",
+    "Build completes without errors",
+    "All existing tests pass"
+  ],
+  "verification": [
+    "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run build",
+    "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

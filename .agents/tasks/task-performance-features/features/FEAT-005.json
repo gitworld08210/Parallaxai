@@ -1,0 +1,27 @@
+{
+  "id": "FEAT-005",
+  "type": "feat",
+  "description": "Lightweight error reporting system that logs errors to Firestore collection 'error_logs' with global error handlers",
+  "status": "pending",
+  "steps": [
+    "Create src/lib/errorReporting.ts - exports: reportError(error: Error, context?: { page?: string; userId?: string; extra?: Record<string, any> }): void. It should write to Firestore collection 'error_logs' with fields: message, stack, user_id, page (window.location.pathname), timestamp (serverTimestamp), device (navigator.userAgent), app_version (from package.json or env). Use fire-and-forget (catch errors silently). Include a shouldReport() check to avoid flooding (max 10 errors per minute from same client using a simple in-memory counter).",
+    "Enhance src/components/ErrorBoundary.tsx - in componentDidCatch, call reportError() with the error and errorInfo. Pass user context if available (accept optional userId prop or use a static setter pattern).",
+    "Update src/main.tsx - add window.addEventListener('error', ...) and window.addEventListener('unhandledrejection', ...) handlers that call reportError(). Register these before createRoot(). Also wrap the App render in the ErrorBoundary component.",
+    "Ensure the error reporting does not break the app if Firestore write fails (all writes are fire-and-forget with .catch(() => {}))"
+  ],
+  "acceptance_criteria": [
+    "reportError function writes to Firestore 'error_logs' collection",
+    "ErrorBoundary logs errors via reportError on catch",
+    "Global error and unhandledrejection handlers are registered in main.tsx",
+    "Error reporting is rate-limited (max 10/min) to prevent flooding",
+    "Logged data includes: message, stack, user_id, page, timestamp, device info",
+    "Build completes without errors",
+    "All existing tests pass"
+  ],
+  "verification": [
+    "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run build",
+    "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

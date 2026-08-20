@@ -1,0 +1,31 @@
+{
+  "project_type": "React 18 SPA with Vite, Tailwind, shadcn/ui, Firebase backend, Cloudinary media, Capacitor mobile",
+  "language": "TypeScript/TSX",
+  "build_system": "Vite 5 with @vitejs/plugin-react-swc, npm package manager. Must source nvm first: source /root/.nvm/nvm.sh",
+  "test_framework": "Vitest with jsdom environment, @testing-library/react, setup in src/test/setup.ts",
+  "build_command": "source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run build",
+  "test_command": "source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run test",
+  "verification_instructions": "1. Run npm run build and confirm no errors. 2. Run npm run test and confirm all tests pass. 3. Verify bundle chunks are reasonable sizes (no single chunk over 600KB).",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm install",
+  "environment_constraints": "Open internet - npm installs work. Node.js available via nvm. No Docker needed.",
+  "contribution_requirements": "All changes committed to main branch. Firebase is primary backend - do not migrate away. UI is premium dark theme, mobile-first.",
+  "key_patterns": "Pages in src/pages/, components in src/components/, hooks in src/hooks/, lib utilities in src/lib/. Firestore queries use firebase/firestore SDK (collection, query, where, orderBy, limit, getDocs, startAfter). Auth via src/contexts/AuthProvider.tsx. Toast notifications via sonner. Path alias @ maps to src/. Cloudinary uploads via src/lib/cloudinary.ts. Already has zod, react-hook-form, @hookform/resolvers as dependencies.",
+  "relevant_files": [
+    "vite.config.ts",
+    "src/pages/Feed.tsx",
+    "src/pages/Discover.tsx",
+    "src/pages/Reels.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/Compose.tsx",
+    "src/pages/EditProfile.tsx",
+    "src/pages/Settings.tsx",
+    "src/lib/cloudinary.ts",
+    "src/components/social/PostCard.tsx",
+    "src/components/ErrorBoundary.tsx",
+    "src/main.tsx",
+    "index.html",
+    "package.json"
+  ],
+  "directory_structure": "Root: vite.config.ts, index.html, package.json, tsconfig.json. src/pages/ - route pages. src/components/ - reusable components. src/lib/ - utilities (firebase.ts, cloudinary.ts, format.ts, utils.ts). src/hooks/ - custom hooks. src/contexts/ - React contexts (AuthProvider). src/services/ - business logic (interestEngine). src/integrations/ - external service clients. src/test/ - test setup."
+}

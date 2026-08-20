@@ -1,0 +1,7 @@
+{
+  "task_id": "task-performance-features",
+  "task_description": "Implement 8 performance and quality features: bundle optimization, infinite scroll, image compression, form validation, error reporting, rate limiting, i18n, and PWA manifest",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005", "FEAT-006", "FEAT-007", "FEAT-008"],
+  "blocked_reason": null
+}

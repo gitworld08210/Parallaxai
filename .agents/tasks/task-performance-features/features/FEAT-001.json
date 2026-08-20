@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Bundle optimization via Vite manual chunks to split the 1.5MB index chunk into manageable vendor bundles",
+  "status": "in_progress",
+  "steps": [
+    "Modify vite.config.ts: add build.rollupOptions.output.manualChunks function that splits: vendor-react (react, react-dom, react-router-dom), vendor-ui (@radix-ui packages, framer-motion, class-variance-authority, clsx, tailwind-merge), vendor-firebase (firebase packages), vendor-charts (recharts), vendor-livekit (livekit-client, @livekit/components-react), vendor-supabase (@supabase/supabase-js)",
+    "Set build.chunkSizeWarningLimit to 600 in vite.config.ts",
+    "Run npm run build and verify the main chunk is significantly smaller and vendor chunks are created",
+    "Verify no runtime errors by checking the build output has no errors"
+  ],
+  "acceptance_criteria": [
+    "Build completes without errors",
+    "Main index chunk is significantly smaller than 1503KB",
+    "Vendor-react, vendor-ui, vendor-firebase, vendor-charts, vendor-livekit, vendor-supabase chunks exist in dist/assets/",
+    "No chunk exceeds 600KB (the new warning limit)"
+  ],
+  "verification": [
+    "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run build 2>&1 | grep -E '(vendor|index-).*\\.js'",
+    "Run: source /root/.nvm/nvm.sh && cd /projects/sandbox/Parallaxai && npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
