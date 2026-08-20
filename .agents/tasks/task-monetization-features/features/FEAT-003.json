@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "feat",
   "description": "Creator Analytics Dashboard - Build a real analytics page at src/pages/Analytics.tsx with views, likes, followers gained, engagement rate, top performing posts, and revenue section using recharts (already in package.json). Data from Firestore aggregations.",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "1. Rewrite src/pages/Analytics.tsx: Replace the placeholder with a real analytics dashboard. Keep the existing Tabs structure (Overview, Content, Audience, Earnings) but populate with real Firestore data. Use the PageHeader component.",
     "2. Overview tab: (a) Create a views chart using recharts (LineChart or AreaChart) showing views over the last 7/30 days. (b) KPI cards: total views, total likes, new followers (7d), engagement rate (likes+comments / views * 100). (c) Query posts from Firestore where user_id matches, aggregate view_count, like_count. (d) Query follows collection where following_id matches to count new followers.",
@@ -26,5 +26,5 @@
     "npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Build and all 25 tests pass. The Analytics page renders real Firestore data with recharts charts. Period toggle (7d/30d) works. All 4 tabs populated: Overview (AreaChart + KPI cards), Content (top posts list), Audience (BarChart + follower count), Earnings (BarChart + tip totals + balance). recharts must be mocked in tests to avoid SVG issues in jsdom."
 }
