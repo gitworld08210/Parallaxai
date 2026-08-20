@@ -1,5 +1,6 @@
 import React from "react";
 import { AlertTriangle } from "lucide-react";
+import { reportError } from "@/lib/errorReporting";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -8,12 +9,20 @@ interface ErrorBoundaryState {
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
+  userId?: string;
 }
 
 export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  private static globalUserId: string | undefined;
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
+  }
+
+  /** Set a global user ID for error reporting when prop-based passing is not convenient. */
+  static setUserId(userId: string | undefined): void {
+    ErrorBoundary.globalUserId = userId;
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -22,6 +31,11 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error("ErrorBoundary caught an error:", error, errorInfo);
+    const userId = this.props.userId || ErrorBoundary.globalUserId;
+    reportError(error, {
+      userId,
+      extra: { componentStack: errorInfo.componentStack || undefined },
+    });
   }
 
   render() {
