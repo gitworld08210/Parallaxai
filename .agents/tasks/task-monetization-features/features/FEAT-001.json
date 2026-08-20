@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Manual Coin Purchase Flow (UTR-based) with Admin OS Finance Department approval page. BuyCoinsSheet already implements the user-facing UTR flow using Firebase (coin_topups collection). This feature: 1) Creates the coin_purchases Firestore schema as specified, updating BuyCoinsSheet to write to coin_purchases instead of coin_topups. 2) Builds a Finance Department page in Admin OS at /admin-os/finance showing pending UTR purchase requests with one-click approve/reject. 3) On approve, credits coins to wallets/{userId}.total. 4) On reject, stores admin_note. 5) Adds the route in App.tsx and links it from AdminOSDashboard.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "1. Update src/components/wallet/BuyCoinsSheet.tsx: Change collection from 'coin_topups' to 'coin_purchases'. Update the document schema to match {user_id, package_id (pack index), amount_inr, coins, utr_number, status: 'pending'|'approved'|'rejected', admin_note: null, created_at, approved_at: null, approved_by: null}. On UTR submit, set utr_number field and keep status as 'pending'.",
     "2. Create src/pages/admin-os/FinanceDepartment.tsx: A page that reads Firestore 'coin_purchases' collection, shows pending requests in a queue with user_id, coins requested, amount_inr, utr_number, created_at. Each row has 'Approve' and 'Reject' buttons. Approve: update doc status to 'approved', set approved_at (serverTimestamp), approved_by (current admin uid), and increment wallets/{userId}.total by coins amount (using Firestore increment). Reject: show an input for admin_note, update status to 'rejected' with the note. Use the existing TopBar component, GlassCard for styling, and follow the dark premium theme.",
@@ -25,5 +25,5 @@
     "npm run test"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All acceptance criteria met. Build succeeds, all 16 tests pass (6 new BuyCoinsSheet tests). Used coin_purchases collection with full schema. FinanceDepartment uses increment() for wallet credit. DialogContent accessibility warning in tests is cosmetic (from radix Sheet), not a failure."
 }
