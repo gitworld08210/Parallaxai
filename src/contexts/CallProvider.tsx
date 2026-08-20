@@ -105,8 +105,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     else if (finalStatus === "declined") label = `🚫 ${kind === "video" ? "Video" : "Voice"} call declined`;
     else if (finalStatus === "cancelled") label = `📵 ${kind === "video" ? "Video" : "Voice"} call cancelled`;
     if (!label) return;
-    await addDoc(collection(db, "messages"), {
-      conversation_id: conversationId,
+    await addDoc(collection(db, "conversations", conversationId, "messages"), {
       sender_id: user.uid,
       content: label,
       created_at: serverTimestamp(),
@@ -144,9 +143,11 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user]);
 
   const subscribeSignals = useCallback((callId: string, peerId: string, onSignal: (k: string, payload: any) => void) => {
+    if (!user) return;
     const q = query(
       collection(db, "call_signals"),
       where("call_id", "==", callId),
+      where("to_user", "==", user.uid),
       orderBy("created_at", "asc"),
     );
     const unsub = onSnapshot(q, (snapshot) => {
@@ -160,7 +161,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       });
     });
     signalUnsubRef.current = unsub;
-  }, []);
+  }, [user]);
 
   const subscribeCallRow = useCallback((callId: string) => {
     const callDocRef = doc(db, "calls", callId);
@@ -337,6 +338,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
         collection(db, "call_signals"),
         where("call_id", "==", inc.call_id),
         where("from_user", "==", inc.caller_id),
+        where("to_user", "==", user.uid),
         orderBy("created_at", "asc"),
       );
       const signalsSnap = await getDocs(signalsQuery);
