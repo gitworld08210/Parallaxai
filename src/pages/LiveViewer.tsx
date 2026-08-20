@@ -295,6 +295,7 @@ export default function LiveViewer() {
       // Client-side runTransaction prevents double-spend but cannot enforce authorization on the recipient credit.
       const viewerWalletRef = doc(db, "wallets", me);
       const hostWalletRef = doc(db, "wallets", stream.host_id);
+      const streamRef = doc(db, "live_streams", stream.id);
 
       await runTransaction(db, async (transaction) => {
         const viewerSnap = await transaction.get(viewerWalletRef);
@@ -311,18 +312,21 @@ export default function LiveViewer() {
         } else {
           transaction.set(hostWalletRef, { user_id: stream.host_id, total: g.cost_coins });
         }
+
+        // Record the gift event inside the transaction for atomicity
+        const giftRef = doc(collection(db, "live_gifts"));
+        transaction.set(giftRef, {
+          stream_id: stream.id,
+          gift_id: g.id,
+          sender_id: me,
+          coins_total: g.cost_coins,
+          created_at: serverTimestamp(),
+        });
+
+        // Increment stream total_gifts inside the transaction
+        transaction.update(streamRef, { total_gifts: increment(g.cost_coins) });
       });
 
-      // Record the gift event (outside transaction - non-critical)
-      await addDoc(collection(db, "live_gifts"), {
-        stream_id: stream.id,
-        gift_id: g.id,
-        sender_id: me,
-        coins_total: g.cost_coins,
-        created_at: serverTimestamp(),
-      });
-      // Increment stream total_gifts
-      await updateDoc(doc(db, "live_streams", stream.id), { total_gifts: increment(g.cost_coins) });
       // Local animation
       setFlying((f) => [...f, { id: g.id, icon: g.icon, key: Date.now() + Math.random() }]);
     } catch (e: any) {

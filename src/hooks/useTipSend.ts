@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { doc, runTransaction, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { doc, runTransaction, collection, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 interface TipParams {
@@ -53,17 +53,18 @@ export function useTipSend() {
         } else {
           transaction.set(recipientWalletRef, { user_id: recipientId, total: amount });
         }
-      });
 
-      // 5. Log transaction (outside runTransaction since it's a separate collection write)
-      await addDoc(collection(db, "transactions"), {
-        sender_id: senderId,
-        recipient_id: recipientId,
-        amount,
-        type: "tip",
-        post_id: postId || null,
-        message: message || null,
-        created_at: serverTimestamp(),
+        // 5. Log transaction inside the same atomic transaction
+        const txRef = doc(collection(db, "transactions"));
+        transaction.set(txRef, {
+          sender_id: senderId,
+          recipient_id: recipientId,
+          amount,
+          type: "tip",
+          post_id: postId || null,
+          message: message || null,
+          created_at: serverTimestamp(),
+        });
       });
 
       setLoading(false);

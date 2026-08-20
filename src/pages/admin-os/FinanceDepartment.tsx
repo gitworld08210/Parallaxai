@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { TopBar } from "@/components/vibe/TopBar";
 import { useAuth } from "@/contexts/AuthProvider";
-import { collection, query, where, orderBy, getDocs, doc, updateDoc, serverTimestamp, increment } from "firebase/firestore";
+import { collection, query, where, orderBy, getDocs, doc, updateDoc, runTransaction, serverTimestamp, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { motion } from "framer-motion";
 import { Coins, CheckCircle2, XCircle, Loader2 } from "lucide-react";
@@ -53,18 +53,45 @@ const FinanceDepartment = () => {
     loadRequests();
   }, []);
 
+  // TODO: In production, approval should be done via a Cloud Function with admin
+  // verification via custom claims (request.auth.token.admin == true). Client-side
+  // approval cannot enforce that only admins perform this action.
   const handleApprove = async (req: PurchaseRequest) => {
     if (!user) return;
     setActionLoading(req.id);
     try {
-      await updateDoc(doc(db, "coin_purchases", req.id), {
-        status: "approved",
-        approved_at: serverTimestamp(),
-        approved_by: user.id,
+      const purchaseRef = doc(db, "coin_purchases", req.id);
+      const walletRef = doc(db, "wallets", req.user_id);
+
+      await runTransaction(db, async (transaction) => {
+        // Read the purchase doc inside the transaction to verify it's still "submitted"
+        const purchaseSnap = await transaction.get(purchaseRef);
+        if (!purchaseSnap.exists()) {
+          throw new Error("Purchase request not found");
+        }
+        const purchaseData = purchaseSnap.data();
+        if (purchaseData.status !== "submitted") {
+          throw new Error(`Cannot approve: status is already "${purchaseData.status}"`);
+        }
+
+        // Read wallet to determine if it exists
+        const walletSnap = await transaction.get(walletRef);
+
+        // Update purchase status atomically
+        transaction.update(purchaseRef, {
+          status: "approved",
+          approved_at: serverTimestamp(),
+          approved_by: user.id,
+        });
+
+        // Credit wallet atomically within the same transaction
+        if (walletSnap.exists()) {
+          transaction.update(walletRef, { total: increment(req.coins) });
+        } else {
+          transaction.set(walletRef, { user_id: req.user_id, total: req.coins });
+        }
       });
-      await updateDoc(doc(db, "wallets", req.user_id), {
-        total: increment(req.coins),
-      });
+
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
       toast.success(`Approved ${req.coins} coins for ${req.user_id}`);
     } catch (e: any) {

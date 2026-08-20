@@ -52,18 +52,28 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.user_id == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
       // Allow update by owner (debit) or by any authenticated user (credit via tip/gift).
-      // In production, replace this with Cloud Functions for proper authorization.
-      allow update: if request.auth != null;
+      // At minimum, prevent setting negative balances. Proper security requires Cloud Functions.
+      allow update: if request.auth != null
+        && (request.auth.uid == walletId || request.resource.data.total >= 0);
     }
 
-    // --- Coin Purchases: authenticated create/read, authenticated update for admin approval ---
+    // --- Coin Purchases: authenticated create/read, restricted update ---
     // NOTE: In production, approve/reject should be restricted to admin-only via custom claims
     // (request.auth.token.admin == true). Since custom claims require a backend to set,
-    // we allow any authenticated user for now. The UI is gated by AdminOSGate.
+    // we restrict updates so only the purchase owner can transition from pending to submitted,
+    // and approval/rejection status changes are allowed for authenticated users (admin UI-gated).
     match /coin_purchases/{purchaseId} {
       allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
       allow read: if request.auth != null;
-      allow update: if request.auth != null;
+      allow update: if request.auth != null
+        && (
+          // Owner can transition from pending to submitted (UTR entry)
+          (resource.data.user_id == request.auth.uid
+            && resource.data.status == 'pending'
+            && request.resource.data.status == 'submitted')
+          // Admin approval/rejection (in production, gate with custom claims)
+          || request.resource.data.status in ['approved', 'rejected']
+        );
       allow delete: if false;
     }
 
