@@ -1,0 +1,40 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "P1 Architecture & UX: ComingSoon page, Error Boundaries, Push Notifications hook, Unread counts, Deep linking, Offline indicator, Image optimization",
+  "status": "completed",
+  "steps": [
+    "1. Create src/pages/ComingSoon.tsx: A polished 'Coming Soon' page with the app's dark theme (bg-black/bg-[#050505]), a rocket or construction icon from lucide-react, a title 'Coming Soon', subtitle 'This feature is under development', and a 'Go Back' button using react-router-dom's useNavigate(-1). Use framer-motion for a subtle entrance animation. Follow the pattern of other pages in the project.",
+    "2. Replace NotFound imports in App.tsx: Change all lazy imports that point to './pages/NotFound' for PLANNED features to point to './pages/ComingSoon' instead. This includes all the Ads, Organization workspace, Admin OS placeholder modules, Executive workspace, Security, Company, Automation, KIP, AI, Production, Governance, Decisions, Reports, Command, Trust&Safety, Verification admin, Support admin, Engineering, Finance/Legal, Security dept, and Platform routes. DO NOT change the actual 404 catch-all `<Route path='*' element={<NotFound />} />` or the explicit `const NotFound = lazy(() => import('./pages/NotFound'));` declaration used for the catch-all.",
+    "3. Create src/components/ErrorBoundary.tsx: A React class component error boundary with: componentDidCatch logging, a graceful fallback UI (dark themed, 'Something went wrong' message, 'Try Again' button that calls window.location.reload(), 'Go Home' link). Export both ErrorBoundary (class) and a functional wrapper.",
+    "4. Wrap App with ErrorBoundary: In src/App.tsx, wrap the entire app content (inside QueryClientProvider) with the ErrorBoundary component.",
+    "5. Create src/hooks/usePushNotifications.ts: Hook that uses @capacitor/push-notifications. On mount: check if running on native (Capacitor.isNativePlatform()), request permission via PushNotifications.requestPermissions(), register with PushNotifications.register(), listen for 'registration' event to get token, save token to Firestore at `push_tokens/{userId}/tokens/{token}` using the Firebase user from useAuth(). Listen for 'pushNotificationReceived' and 'pushNotificationActionPerformed' events. Return { token, permissionGranted }.",
+    "6. Register push notifications in NativeInit: In src/hooks/useNativeApp.ts, import and call usePushNotifications().",
+    "7. Fix unread counts in AppShell.tsx: Replace the placeholder useEffect with real Firestore listeners. Use onSnapshot on a query: collection 'notifications' where 'user_id' == user.uid and 'read' == false (count results for unreadNotif). For unread DMs: query collection 'conversations' where user.uid is in 'participants' array and has 'unread_count_{uid}' > 0 (or simpler: query 'conversation_members' where user_id == uid and unread_count > 0). Use onSnapshot for real-time updates. Import db from src/lib/firebase.ts. Clean up listeners on unmount. Remove the supabase import since it won't be used.",
+    "8. Add deep linking to capacitor.config.ts: Add an `appUrlOpen` handler configuration. Add `server: { url: 'https://aurelix.app' }` or use the plugins.App.appUrlOpen pattern. In the Android manifest (android/app/src/main/AndroidManifest.xml), add an intent-filter for deep links with scheme https, host aurelix.app.",
+    "9. Create src/components/OfflineIndicator.tsx: A component that listens to navigator.onLine and online/offline events. When offline, shows a fixed top banner with amber/yellow background: 'You are offline. Some features may not work.' Use framer-motion AnimatePresence for enter/exit animation.",
+    "10. Add OfflineIndicator to AppShell.tsx: Import and render OfflineIndicator at the top of the app shell container.",
+    "11. Image optimization: In relevant components that render images (PostCard, profile avatars), add loading='lazy' attribute to img tags. Search for <img tags in src/components/ and add loading='lazy' where missing. This is a best-effort optimization."
+  ],
+  "acceptance_criteria": [
+    "src/pages/ComingSoon.tsx exists and renders a polished coming-soon UI",
+    "All ~268 NotFound lazy imports for planned features in App.tsx now point to ComingSoon",
+    "The actual 404 catch-all route still uses NotFound",
+    "src/components/ErrorBoundary.tsx exists with proper error catching and fallback UI",
+    "ErrorBoundary wraps the app in App.tsx",
+    "src/hooks/usePushNotifications.ts exists and handles Capacitor push notification registration",
+    "useNativeApp.ts calls usePushNotifications",
+    "AppShell.tsx uses Firestore onSnapshot for unread notification and DM counts",
+    "capacitor.config.ts has deep link configuration",
+    "AndroidManifest.xml has intent-filter for https://aurelix.app deep links",
+    "src/components/OfflineIndicator.tsx exists and shows when offline",
+    "OfflineIndicator is rendered in AppShell",
+    "npm run build succeeds"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": "All 264 NotFound lazy imports replaced with ComingSoon (1 remains for the actual NotFound component used by the catch-all route and 2 inline element usages). Build and tests pass cleanly. The ExecutivePlaceholders const was a plain function (not lazy), also updated to ComingSoon. Image loading=lazy added to PostCard, HighlightsRail, CollabInviteSheet, and NewHighlightSheet media images."
+}
