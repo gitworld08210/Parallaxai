@@ -62,8 +62,10 @@ const Discover = () => {
   );
 
   // Initial load of profiles + trending posts
+  const initialLoadDoneRef = useRef(false);
   useEffect(() => {
     let cancelled = false;
+    initialLoadDoneRef.current = false;
     setLoading(true);
     Promise.all([
       loadMoreProfiles(),
@@ -76,6 +78,7 @@ const Discover = () => {
       Promise.resolve({ data: [] }),
     ]).then(([_, tRes, fRes]) => {
       if (cancelled) return;
+      initialLoadDoneRef.current = true;
       setTrending((tRes.docs.map(doc => ({ id: doc.id, ...doc.data() })) as TrendingPost[]));
       setFollowing(new Set(((fRes.data ?? []) as any[]).map((f) => f.following_id)));
       setLoading(false);
@@ -90,7 +93,7 @@ const Discover = () => {
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && profilesHasMore && !profilesLoading) {
+        if (entries[0].isIntersecting && profilesHasMore && !profilesLoading && initialLoadDoneRef.current) {
           loadMoreProfiles();
         }
       },

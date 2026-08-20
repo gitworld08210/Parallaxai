@@ -1,6 +1,8 @@
 /**
  * Client-side image compression using the Canvas API.
- * Resizes images to a max width and compresses as JPEG.
+ * Resizes images to a max width and compresses them.
+ * - For formats with alpha channels (PNG, GIF, WebP), exports as WebP to preserve transparency.
+ * - For other formats (JPEG, etc.), exports as JPEG.
  */
 
 export interface CompressOptions {
@@ -12,12 +14,16 @@ const DEFAULT_MAX_WIDTH = 1080;
 const DEFAULT_QUALITY = 0.8;
 const SKIP_THRESHOLD_BYTES = 100 * 1024; // 100KB
 
+/** MIME types that may contain alpha channel data */
+const ALPHA_CAPABLE_TYPES = ['image/png', 'image/gif', 'image/webp'];
+
 /**
  * Compress an image file using an offscreen canvas.
  * - Skips compression for files already under 100KB.
  * - Skips compression for non-image types.
  * - Resizes to maxWidth (default 1080px) preserving aspect ratio.
- * - Exports as JPEG at the given quality (default 0.8).
+ * - Uses WebP output for alpha-capable formats (PNG, GIF, WebP) to preserve transparency.
+ * - Uses JPEG output for opaque formats at the given quality (default 0.8).
  */
 export const compressImage = (
   file: File,
@@ -35,6 +41,11 @@ export const compressImage = (
   if (file.size <= SKIP_THRESHOLD_BYTES) {
     return Promise.resolve(file);
   }
+
+  // Determine output format: preserve alpha for PNG/GIF/WebP, use JPEG otherwise
+  const outputType = ALPHA_CAPABLE_TYPES.includes(file.type)
+    ? "image/webp"
+    : "image/jpeg";
 
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -71,7 +82,7 @@ export const compressImage = (
             reject(new Error("Canvas toBlob returned null"));
           }
         },
-        "image/jpeg",
+        outputType,
         quality
       );
     };

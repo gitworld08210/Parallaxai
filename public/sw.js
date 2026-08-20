@@ -1,4 +1,5 @@
 const CACHE_NAME = 'parallax-v1';
+const MAX_ASSET_CACHE_SIZE = 50;
 
 const APP_SHELL_URLS = [
   '/',
@@ -29,21 +30,32 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch event - cache-first for navigation, network-first for other requests
+/**
+ * Trim the cache to a maximum number of entries (FIFO eviction).
+ */
+async function trimCache(cacheName, maxSize) {
+  const cache = await caches.open(cacheName);
+  const keys = await cache.keys();
+  if (keys.length > maxSize) {
+    const excess = keys.length - maxSize;
+    for (let i = 0; i < excess; i++) {
+      await cache.delete(keys[i]);
+    }
+  }
+}
+
+// Fetch event - network-first for navigation and hashed assets, with cache fallback
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
   // Only handle GET requests
   if (request.method !== 'GET') return;
 
-  // For navigation requests, serve cached index.html (cache-first)
+  // For navigation requests, use network-first with cache fallback for offline
   if (request.mode === 'navigate') {
     event.respondWith(
-      caches.match('/index.html').then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        return fetch(request).then((networkResponse) => {
+      fetch(request)
+        .then((networkResponse) => {
           if (networkResponse.ok) {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
@@ -51,31 +63,32 @@ self.addEventListener('fetch', (event) => {
             });
           }
           return networkResponse;
-        });
-      }).catch(() => {
-        return caches.match('/index.html');
-      })
+        })
+        .catch(() => {
+          return caches.match('/index.html');
+        })
     );
     return;
   }
 
-  // For CSS and JS assets, try cache first then network
+  // For CSS and JS assets (hashed by Vite), use network-first so deploys are picked up immediately.
+  // Cache the response for offline use and evict old entries to prevent unbounded growth.
   if (request.url.match(/\.(css|js)(\?|$)/)) {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-        return fetch(request).then((networkResponse) => {
+      fetch(request)
+        .then((networkResponse) => {
           if (networkResponse.ok) {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, responseClone);
+              trimCache(CACHE_NAME, MAX_ASSET_CACHE_SIZE);
             });
           }
           return networkResponse;
-        });
-      })
+        })
+        .catch(() => {
+          return caches.match(request);
+        })
     );
     return;
   }

@@ -52,7 +52,7 @@ export function checkRateLimit(
     const seconds = Math.ceil(retryAfterMs / 1000);
     toast.error(
       actionName
-        ? `Slow down! Try again in ${seconds} seconds`
+        ? `Too many ${actionName} attempts! Try again in ${seconds}s`
         : `Slow down! Try again in ${seconds} seconds`
     );
     return false;

@@ -31,9 +31,10 @@ export function useInfiniteFirestore<T = DocumentData>(
   const [hasMore, setHasMore] = useState(true);
   const lastDocRef = useRef<DocumentSnapshot<DocumentData> | null>(null);
   const isFetchingRef = useRef(false);
+  const hasMoreRef = useRef(true);
 
   const loadMore = useCallback(async () => {
-    if (!baseQuery || isFetchingRef.current || !hasMore) return;
+    if (!baseQuery || isFetchingRef.current || !hasMoreRef.current) return;
     isFetchingRef.current = true;
     setLoading(true);
 
@@ -47,6 +48,7 @@ export function useInfiniteFirestore<T = DocumentData>(
       const snap = await getDocs(q);
 
       if (snap.docs.length < pageSize) {
+        hasMoreRef.current = false;
         setHasMore(false);
       }
 
@@ -64,11 +66,12 @@ export function useInfiniteFirestore<T = DocumentData>(
       setLoading(false);
       isFetchingRef.current = false;
     }
-  }, [baseQuery, pageSize, hasMore]);
+  }, [baseQuery, pageSize]);
 
   const refresh = useCallback(async () => {
     if (!baseQuery) return;
     lastDocRef.current = null;
+    hasMoreRef.current = true;
     setHasMore(true);
     setData([]);
     isFetchingRef.current = false;
@@ -79,6 +82,7 @@ export function useInfiniteFirestore<T = DocumentData>(
       const snap = await getDocs(q);
 
       if (snap.docs.length < pageSize) {
+        hasMoreRef.current = false;
         setHasMore(false);
       }
 
