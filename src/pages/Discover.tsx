@@ -1,11 +1,13 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, TrendingUp, Sparkles, Crown, BadgeCheck, Flame, PenSquare } from "lucide-react";
 import { AuraAvatar } from "@/components/vibe/AuraAvatar";
 import { VerificationBadge } from "@/components/vibe/VerificationBadge";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useInfiniteFirestore } from "@/hooks/useInfiniteFirestore";
 
 import { useAuth } from "@/contexts/AuthProvider";
 import { fmt, gradientFor, initialsOf } from "@/lib/format";
@@ -36,20 +38,33 @@ type TrendingPost = {
 const Discover = () => {
   const { user } = useAuth();
   const [q, setQ] = useState("");
-  const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [trending, setTrending] = useState<TrendingPost[]>([]);
   const [following, setFollowing] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
+  // Cursor-based pagination for profiles
+  const profilesQuery = useMemo(
+    () => query(collection(db, "profiles"), orderBy("followers_count", "desc")),
+    []
+  );
+  const {
+    data: paginatedProfiles,
+    loading: profilesLoading,
+    hasMore: profilesHasMore,
+    loadMore: loadMoreProfiles,
+  } = useInfiniteFirestore<Profile>(profilesQuery, { pageSize: 20 });
+
+  const allProfiles = useMemo(
+    () => paginatedProfiles.filter((p) => p.user_id !== user?.id),
+    [paginatedProfiles, user?.id]
+  );
+
+  // Initial load of profiles + trending posts
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     Promise.all([
-      getDocs(query(
-        collection(db, "profiles"),
-        orderBy("followers_count", "desc"),
-        limit(20)
-      )),
+      loadMoreProfiles(),
       getDocs(query(
         collection(db, "posts"),
         where("is_reel", "==", false),
@@ -57,16 +72,31 @@ const Discover = () => {
         limit(6)
       )),
       Promise.resolve({ data: [] }),
-    ]).then(([pSnap, tRes, fRes]) => {
+    ]).then(([_, tRes, fRes]) => {
       if (cancelled) return;
-      const profs = pSnap.docs.map(doc => ({ user_id: doc.id, ...doc.data() })) as Profile[];
-      setAllProfiles(profs.filter((p) => p.user_id !== user?.id));
       setTrending((tRes.docs.map(doc => ({ id: doc.id, ...doc.data() })) as TrendingPost[]));
       setFollowing(new Set(((fRes.data ?? []) as any[]).map((f) => f.following_id)));
       setLoading(false);
     });
     return () => { cancelled = true; };
   }, [user?.id]);
+
+  // IntersectionObserver sentinel for profiles pagination
+  const profilesSentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = profilesSentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && profilesHasMore && !profilesLoading) {
+          loadMoreProfiles();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [profilesHasMore, profilesLoading, loadMoreProfiles]);
 
   const toggleFollow = async (target: string) => {
     if (!user) return toast.error("Sign in to follow");
@@ -252,10 +282,16 @@ const Discover = () => {
           <div className="px-4 mt-7">
             <SectionHeader icon={TrendingUp} label="All creators" />
             <div className="mt-3 divide-y divide-border">
-              {allProfiles.slice(0, 30).map((p) => (
+              {allProfiles.map((p) => (
                 <CreatorRow key={p.user_id} p={p} following={following.has(p.user_id)} onToggle={() => toggleFollow(p.user_id)} />
               ))}
             </div>
+            {/* Infinite scroll sentinel */}
+            <div ref={profilesSentinelRef} className="h-1" />
+            {profilesLoading && <LoadingSpinner />}
+            {!profilesHasMore && allProfiles.length > 0 && (
+              <p className="text-center text-xs text-muted-foreground py-6">No more creators to show</p>
+            )}
           </div>
         </>
       )}

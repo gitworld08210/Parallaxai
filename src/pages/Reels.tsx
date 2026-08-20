@@ -1,10 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, Send, Plus, Volume2, VolumeX, Pause, Camera, Search, Music2, Bookmark, MoreHorizontal, AlertCircle, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { useInfiniteFirestore } from "@/hooks/useInfiniteFirestore";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 import { useAuth } from "@/contexts/AuthProvider";
 import { useAdInteraction } from "@/features/content-understanding/hooks/useAdIntelligence";
@@ -34,7 +36,6 @@ type FeedTab = "following" | "foryou";
 
 const Reels = () => {
   const { user } = useAuth();
-  const [reels, setReels] = useState<Reel[]>([]);
   const [muted, setMuted] = useState(true);
   const [tab, setTab] = useState<FeedTab>("foryou");
   const [commentPost, setCommentPost] = useState<string | null>(null);
@@ -47,25 +48,56 @@ const Reels = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const dimTimer = useRef<number | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      const q = query(
+  // Cursor-based infinite scroll for reels
+  const reelsQuery = useMemo(
+    () =>
+      query(
         collection(db, "posts"),
         where("is_reel", "==", true),
         where("status", "==", "published"),
-        orderBy("created_at", "desc"),
-        limit(10) // Reduced from 50 to 10 for faster initial load
-      );
-      const snap = await getDocs(q);
-      const data = snap.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data(),
-        liked: false 
-      })) as Reel[];
+        orderBy("created_at", "desc")
+      ),
+    []
+  );
+  const { data: reelsData, loading: reelsLoading, hasMore, loadMore } = useInfiniteFirestore<Reel>(
+    reelsQuery,
+    { pageSize: 10 }
+  );
+  const [reels, setReels] = useState<Reel[]>([]);
 
-      setReels(data);
-    })();
+  // Initial load
+  useEffect(() => {
+    loadMore();
   }, [user?.id]);
+
+  // Sync paginated data into local state (to support liked/bookmarked toggling)
+  useEffect(() => {
+    setReels((prev) => {
+      const existingIds = new Set(prev.map((r) => r.id));
+      const newReels = reelsData
+        .filter((r) => !existingIds.has(r.id))
+        .map((r) => ({ ...r, liked: false, bookmarked: false }));
+      if (newReels.length === 0) return prev;
+      return [...prev, ...newReels];
+    });
+  }, [reelsData]);
+
+  // Load more reels when user is near the end of the list
+  const reelsSentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = reelsSentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !reelsLoading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, reelsLoading, loadMore]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -191,6 +223,13 @@ const Reels = () => {
             />
           </div>
         ))}
+        {/* Sentinel for loading more reels */}
+        <div ref={reelsSentinelRef} className="snap-start h-1 w-full" />
+        {reelsLoading && (
+          <div className="snap-start h-24 w-full grid place-items-center">
+            <LoadingSpinner className="text-white" />
+          </div>
+        )}
       </div>
 
       <CommentSheet postId={commentPost} open={!!commentPost} onOpenChange={(b) => !b && setCommentPost(null)} />

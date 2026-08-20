@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Infinite scroll with cursor-based Firestore pagination for Feed, Discover, and Reels pages using IntersectionObserver",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Create src/hooks/useInfiniteFirestore.ts - a reusable hook that accepts a Firestore query builder, page size, and order field. It should use startAfter() with the last document snapshot for cursor-based pagination. Returns { data, loading, hasMore, loadMore, refresh }. Use useRef to store the last document snapshot for startAfter cursor.",
     "Modify src/pages/Feed.tsx - replace the single getDocs(limit(10)) call with useInfiniteFirestore. Add an IntersectionObserver sentinel div at the bottom of the posts list that triggers loadMore. Show a loading spinner (a simple animated div with tailwind) at the bottom when fetching. Add pull-to-refresh: detect touchstart/touchmove at top of scroll container and call refresh().",

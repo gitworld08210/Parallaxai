@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { Menu, Sparkles, Users, PenSquare, Bell } from "lucide-react";
@@ -11,9 +11,11 @@ import { FeedSkeleton } from "@/components/social/FeedSkeleton";
 import { EmptyState } from "@/components/empty/EmptyState";
 import { SideMenu } from "@/components/layout/SideMenu";
 import { AuraAvatar } from "@/components/vibe/AuraAvatar";
-import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { collection, query as fsQuery, where, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getInterestVector, scorePosts } from "@/services/interestEngine";
+import { useInfiniteFirestore } from "@/hooks/useInfiniteFirestore";
 
 import { useAuth } from "@/contexts/AuthProvider";
 import { gradientFor, initialsOf } from "@/lib/format";
@@ -22,47 +24,92 @@ import { cn } from "@/lib/utils";
 const Feed = () => {
   const { user, profile } = useAuth();
   const [tab, setTab] = useState<"foryou" | "following">("foryou");
-  const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rankedPosts, setRankedPosts] = useState<FeedPost[]>([]);
   const [commentPost, setCommentPost] = useState<string | null>(null);
 
-  const load = async () => {
-    if (!user) return;
-    setLoading(true);
+  // Build Firestore query for infinite scroll
+  const baseQuery = useMemo(() => {
+    if (!user) return null;
+    return fsQuery(
+      collection(db, "posts"),
+      where("status", "==", "published"),
+      where("is_reel", "==", false),
+      orderBy("created_at", "desc")
+    );
+  }, [user?.id]);
 
-    try {
-      // Load posts from Firestore - using a memoized query would be better but let's optimize the execution
-      const q = query(
-        collection(db, "posts"),
-        where("status", "==", "published"),
-        where("is_reel", "==", false),
-        orderBy("created_at", "desc"),
-        limit(10)
-      );
-      const snap = await getDocs(q);
-      const postsData = snap.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data(),
-        liked: false // Initialize liked state
-      })) as FeedPost[];
+  const { data: rawPosts, loading, hasMore, loadMore, refresh } = useInfiniteFirestore<FeedPost>(
+    baseQuery,
+    { pageSize: 10 }
+  );
 
-      if (tab === "foryou") {
-        // Rank posts using interest engine for the For You tab
-        const interests = await getInterestVector(user.id);
-        const rankedPosts = scorePosts(postsData, interests);
-        setPosts(rankedPosts);
-      } else {
-        setPosts(postsData);
-      }
-    } catch (err) {
-      console.error("Error loading feed:", err);
-    } finally {
-      setLoading(false);
+  // Apply interest ranking for "foryou" tab
+  useEffect(() => {
+    if (!user || rawPosts.length === 0) {
+      setRankedPosts(rawPosts.map(p => ({ ...p, liked: false })));
+      return;
     }
-  };
+    if (tab === "foryou") {
+      getInterestVector(user.id).then((interests) => {
+        const scored = scorePosts(
+          rawPosts.map(p => ({ ...p, liked: false })),
+          interests
+        );
+        setRankedPosts(scored);
+      }).catch(() => {
+        setRankedPosts(rawPosts.map(p => ({ ...p, liked: false })));
+      });
+    } else {
+      setRankedPosts(rawPosts.map(p => ({ ...p, liked: false })));
+    }
+  }, [rawPosts, tab, user?.id]);
 
+  // Initial load + tab change
+  useEffect(() => {
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, user?.id]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [tab, user?.id]);
+  const posts = rankedPosts;
+
+  // IntersectionObserver sentinel for infinite scroll
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadMore]);
+
+  // Pull-to-refresh
+  const touchStartY = useRef(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+  const handleTouchMove = useCallback(
+    async (e: React.TouchEvent) => {
+      if (refreshing) return;
+      const main = document.querySelector("main");
+      const scrollTop = main?.scrollTop ?? 0;
+      if (scrollTop > 5) return;
+      const dy = e.touches[0].clientY - touchStartY.current;
+      if (dy > 80) {
+        setRefreshing(true);
+        await refresh();
+        setRefreshing(false);
+      }
+    },
+    [refresh, refreshing]
+  );
 
   const [chromeHidden, setChromeHidden] = useState(false);
   const lastY = useRef(0);
@@ -83,7 +130,7 @@ const Feed = () => {
   const displayName = profile?.display_name || profile?.username || "";
 
   return (
-    <div>
+    <div onTouchStart={handleTouchStart} onTouchMove={handleTouchMove}>
       <Helmet>
         <title>Aurelix Feed — Discover creators, reels & live culture</title>
         <meta name="description" content="Your personalized Aurelix feed: creators, reels, live streams, and AI-native community moments in one place." />
@@ -163,10 +210,17 @@ const Feed = () => {
         </div>
       </div>
 
+      {/* Pull-to-refresh indicator */}
+      {refreshing && (
+        <div className="flex justify-center py-3">
+          <div className="h-5 w-5 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        </div>
+      )}
+
       <StoriesRail />
 
       <section className="pb-24">
-        {loading && <FeedSkeleton count={2} />}
+        {loading && posts.length === 0 && <FeedSkeleton count={2} />}
         {!loading && posts.length === 0 && (
           tab === "following" ? (
             <EmptyState
@@ -194,6 +248,13 @@ const Feed = () => {
             </div>
           ))}
         </div>
+
+        {/* Infinite scroll sentinel */}
+        <div ref={sentinelRef} className="h-1" />
+        {loading && posts.length > 0 && <LoadingSpinner />}
+        {!hasMore && posts.length > 0 && (
+          <p className="text-center text-xs text-muted-foreground py-6">You're all caught up</p>
+        )}
       </section>
 
       {/* Floating compose FAB — X-style */}
