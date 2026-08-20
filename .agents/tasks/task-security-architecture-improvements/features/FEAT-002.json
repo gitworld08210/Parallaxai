@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-002",
+  "type": "fix",
+  "description": "P0 Security: Fix Firestore rules, move Firebase config to env vars, fix CallProvider, remove duplicate Supabase writes, create .env.example",
+  "status": "completed",
+  "steps": [
+    "1. Rewrite firestore.rules: Remove the dangerous wildcard `match /{document=**}` fallback. Add explicit rules for: wallets (owner read/write by user_id field), conversations (participants only), messages (conversation participants), notifications (owner read, system write), admin_audit_logs (admin only), mutes (owner read/write), blocks (owner read/write), reports (authenticated create, admin read).",
+    "2. Move Firebase config to env vars: In src/lib/firebase.ts, replace the hardcoded firebaseConfig object with values from import.meta.env.VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, VITE_FIREBASE_STORAGE_BUCKET, VITE_FIREBASE_MESSAGING_SENDER_ID, VITE_FIREBASE_APP_ID. Add a console.warn if any are missing.",
+    "3. Fix CallProvider: The entire signaling system uses `supabase.from('calls')` and `supabase.from('call_signals')` but auth is Firebase. Replace all Supabase calls with Firebase Realtime Database or Firestore equivalents. The call state (calls collection) and signaling (call_signals) should use Firestore. Use `db` from src/lib/firebase.ts. Use `user.uid` from the AuthProvider context (already available via `useAuth()`). Replace supabase.channel() real-time subscriptions with Firestore onSnapshot listeners. Keep the same WebRTC peer connection logic intact.",
+    "4. Remove duplicate Supabase profile writes in src/pages/Auth.tsx: Remove both `supabase.from('profiles').insert(...)` calls (one in email signup around line 126, one in Google signup around line 186). The Firestore write (via writeProfile/setDoc) is the primary source of truth. Also remove the `import { supabase }` line if it's now unused.",
+    "5. Create .env.example at project root with all required environment variables documented: VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_PROJECT_ID, VITE_FIREBASE_STORAGE_BUCKET, VITE_FIREBASE_MESSAGING_SENDER_ID, VITE_FIREBASE_APP_ID, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY."
+  ],
+  "acceptance_criteria": [
+    "firestore.rules no longer contains `match /{document=**}` wildcard",
+    "firestore.rules has explicit rules for wallets, conversations, messages, notifications, admin_audit_logs, mutes, blocks, reports",
+    "src/lib/firebase.ts reads config from import.meta.env.VITE_FIREBASE_* variables",
+    "src/contexts/CallProvider.tsx no longer imports from @/integrations/supabase/client",
+    "src/contexts/CallProvider.tsx uses Firestore (from src/lib/firebase.ts) for call signaling",
+    "src/pages/Auth.tsx no longer has supabase.from('profiles').insert() calls",
+    ".env.example exists with all env vars documented",
+    "npm run build succeeds with a .env file providing the values (or with placeholders since Vite only checks at runtime)"
+  ],
+  "verification": [
+    "npm run build",
+    "npm run test"
+  ],
+  "blocked_reason": null,
+  "findings": "All 5 steps completed successfully. The .env file that previously contained Supabase credentials was removed from git tracking and added to .gitignore. A new .env file (untracked) was created locally with Firebase config for build verification. The .env.example documents all required vars. CallProvider was fully rewritten from Supabase to Firestore with proper onSnapshot listeners and cleanup. Build and tests pass."
+}

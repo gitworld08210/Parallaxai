@@ -1,0 +1,32 @@
+{
+  "project_type": "React 18 SPA with Capacitor for Android, Firebase as primary backend",
+  "language": "TypeScript",
+  "build_system": "Vite + npm",
+  "test_framework": "Vitest with jsdom environment, @testing-library/react",
+  "build_command": "npm run build",
+  "test_command": "npm run test",
+  "verification_instructions": "1. Run npm run build to verify compilation. 2. Run npm run test to verify tests pass.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "npm install",
+  "environment_constraints": "Open internet - npm installs work. No Firebase/Android emulator available.",
+  "contribution_requirements": "No CONTRIBUTING.md found. Standard commit messages.",
+  "key_patterns": "- Firebase auth via src/lib/firebase.ts (hardcoded config currently). - AuthProvider wraps Firebase onAuthStateChanged, exposes user with uid/id fields. - Supabase client at src/integrations/supabase/client.ts already uses VITE_ env vars. - CallProvider uses supabase for signaling (calls, call_signals tables) - this is broken because auth is Firebase. - App.tsx has ~268 lazy imports pointing to NotFound for planned features. - AppShell.tsx has placeholder unread counts (always 0). - NativeInit component in App.tsx runs hooks for back button and status bar.",
+  "relevant_files": [
+    "firestore.rules",
+    "src/lib/firebase.ts",
+    "src/App.tsx",
+    "src/contexts/CallProvider.tsx",
+    "src/contexts/AuthProvider.tsx",
+    "src/components/layout/AppShell.tsx",
+    "src/pages/NotFound.tsx",
+    "src/pages/Auth.tsx",
+    "src/hooks/useNativeApp.ts",
+    "src/integrations/supabase/client.ts",
+    "capacitor.config.ts",
+    "android/app/src/main/AndroidManifest.xml",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "src/test/setup.ts"
+  ],
+  "directory_structure": "src/pages/ - 80+ page components. src/components/ - UI components organized by feature. src/contexts/ - AuthProvider, ThemeProvider, CallProvider. src/hooks/ - custom hooks. src/lib/ - utilities (firebase, webrtc, capacitor). src/integrations/ - supabase client. android/ - Capacitor Android project."
+}
