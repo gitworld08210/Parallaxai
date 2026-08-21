@@ -81,42 +81,25 @@ const EditProfile = () => {
     const formData = form.getValues();
     
     try {
-      // 1. Update Profile in Firestore (Primary Source of Truth)
-      const { doc, setDoc, serverTimestamp } = await import("firebase/firestore");
-      const { db } = await import("@/lib/firebase");
-      
+      // Update Profile in Supabase
       const profileData = {
-        id: user.uid,
-        user_id: user.uid,
         display_name: formData.display_name,
         username: formData.username,
         bio: formData.bio || "",
         avatar_url: avatar,
         cover_url: cover,
-        updated_at: serverTimestamp(),
+        updated_at: new Date().toISOString(),
       };
 
-      await setDoc(doc(db, "profiles", user.uid), profileData, { merge: true });
+      await supabase.from("profiles").update(profileData as any).eq("user_id", user.uid);
       
       // Also try writing to username-indexed doc for resolution efficiency
       if (formData.username) {
-        await setDoc(doc(db, "usernames", formData.username.toLowerCase()), { 
+        await supabase.from('usernames' as any).upsert({ 
+          username: formData.username.toLowerCase(),
           user_id: user.uid,
           uid: user.uid 
-        }, { merge: true });
-      }
-
-      // 2. Sync to Supabase for backend triggers/legacy logic
-      try {
-        await supabase.from("profiles").update({
-          display_name: formData.display_name, 
-          username: formData.username, 
-          bio: formData.bio || "", 
-          avatar_url: avatar, 
-          cover_url: cover,
-        } as any).eq("user_id", user.uid);
-      } catch (err) {
-        console.warn("Supabase sync failed, continuing...", err);
+        } as any);
       }
 
       if (refreshProfile) await refreshProfile();

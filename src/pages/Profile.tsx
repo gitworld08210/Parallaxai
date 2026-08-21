@@ -44,8 +44,7 @@ import { OrgLogoCard } from "@/components/profile/OrgLogoCard";
 import { StickyTabs } from "@/components/profile/StickyTabs";
 import { VerificationSheet } from "@/components/profile/VerificationSheet";
 
-import { collection, query, where, orderBy, getDocs, limit, getDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 import { useAuth } from "@/contexts/AuthProvider";
 import { useUserOrganizations } from "@/hooks/organization/useUserOrganizations";
@@ -121,75 +120,22 @@ const Profile = () => {
       
       let p: any = null;
 
-      // 1. Try resolving as UID directly
-      try {
-        const profDoc = await getDoc(doc(db, "profiles", target));
-        if (profDoc.exists()) {
-          p = { id: profDoc.id, ...profDoc.data() };
-        }
-      } catch (err) {
-        console.warn("UID resolution failed:", err);
+      // 1. Try resolving by user_id
+      {
+        const { data } = await supabase.from('profiles').select('*').eq('user_id', target).maybeSingle();
+        if (data) p = data;
       }
 
-      // 1b. If UID resolution fails but it looks like a UID, don't stop yet
-      if (!p && target.length > 20) {
-         try {
-           const qId = query(collection(db, "profiles"), where("user_id", "==", target), limit(1));
-           const snapId = await getDocs(qId);
-           if (!snapId.empty) {
-             p = { id: snapId.docs[0].id, ...snapId.docs[0].data() };
-           }
-         } catch (e) {}
+      // 2. Try resolving by username
+      if (!p) {
+        const { data } = await supabase.from('profiles').select('*').eq('username', target).maybeSingle();
+        if (data) p = data;
       }
 
-      // 2. Try resolving via "usernames" mapping collection (most efficient for handle lookup)
+      // 3. Try resolving by username lowercase
       if (!p) {
-        try {
-          const nameDoc = await getDoc(doc(db, "usernames", target.toLowerCase()));
-          if (nameDoc.exists()) {
-            const resolvedUid = nameDoc.data().user_id || nameDoc.data().uid;
-            const profDoc = await getDoc(doc(db, "profiles", resolvedUid));
-            if (profDoc.exists()) {
-              p = { id: profDoc.id, ...profDoc.data() };
-            }
-          }
-        } catch (err) {
-          console.warn("Username mapping resolution failed:", err);
-        }
-      }
-
-      // 3. Fallback: query profiles collection by username field
-      if (!p) {
-        try {
-          const qProf = query(
-            collection(db, "profiles"),
-            where("username", "==", target),
-            limit(1)
-          );
-          const snapProf = await getDocs(qProf);
-          if (!snapProf.empty) {
-            p = { id: snapProf.docs[0].id, ...snapProf.docs[0].data() };
-          }
-        } catch (err) {
-          console.warn("Username query resolution failed:", err);
-        }
-      }
-      
-      // 4. Final Fallback: query by user_id field
-      if (!p) {
-        try {
-          const qId = query(
-            collection(db, "profiles"),
-            where("user_id", "==", target),
-            limit(1)
-          );
-          const snapId = await getDocs(qId);
-          if (!snapId.empty) {
-            p = { id: snapId.docs[0].id, ...snapId.docs[0].data() };
-          }
-        } catch (err) {
-          console.warn("ID field query resolution failed:", err);
-        }
+        const { data } = await supabase.from('profiles').select('*').eq('username', target.toLowerCase()).maybeSingle();
+        if (data) p = data;
       }
       
       if (p) {
@@ -204,55 +150,70 @@ const Profile = () => {
 
       if (p) {
         const userId = p.user_id || p.id;
-        const qPosts = query(
-          collection(db, "posts"),
-          where("user_id", "==", userId),
-          where("is_reel", "==", false),
-          orderBy("created_at", "desc"),
-          limit(10)
-        );
-        const qReels = query(
-          collection(db, "posts"),
-          where("user_id", "==", userId),
-          where("is_reel", "==", true),
-          orderBy("created_at", "desc"),
-          limit(8)
-        );
+        const { data: postsData } = await supabase
+          .from('posts' as any)
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_reel', false)
+          .order('created_at', { ascending: false })
+          .limit(10);
 
-        const [snapPosts, snapReels] = await Promise.all([
-          getDocs(qPosts),
-          getDocs(qReels)
-        ]);
+        const { data: reelsData } = await supabase
+          .from('posts' as any)
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_reel', true)
+          .order('created_at', { ascending: false })
+          .limit(8);
 
-        const pdata = snapPosts.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const rdata = snapReels.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const pdata = (postsData as any[]) || [];
+        const rdata = (reelsData as any[]) || [];
 
         let liked = new Set<string>();
-        const allIds = [...(pdata ?? []), ...(rdata ?? [])].map((d: any) => d.id);
+        const allIds = [...pdata, ...rdata].map((d: any) => d.id);
         if (user && allIds.length) {
-          const lSnap = await getDocs(query(collection(db, "likes"), where("user_id", "==", user.uid), where("post_id", "in", allIds)));
-          liked = new Set(lSnap.docs.map(doc => doc.data().post_id));
+          const { data: likesData } = await supabase
+            .from('likes' as any)
+            .select('post_id')
+            .eq('user_id', user.uid)
+            .in('post_id', allIds);
+          liked = new Set((likesData as any[] || []).map((d: any) => d.post_id));
         }
         setPosts(
-          ((pdata ?? []) as any[])
-            .sort((a, b) => {
+          pdata
+            .sort((a: any, b: any) => {
               const ap = a.is_pinned ? 1 : 0;
               const bp = b.is_pinned ? 1 : 0;
               if (ap !== bp) return bp - ap;
               return +new Date(b.created_at) - +new Date(a.created_at);
             })
             .map((d: any) => ({ ...d, liked: liked.has(d.id) })));
-        setReels((rdata ?? []).map((d: any) => ({ ...d, liked: liked.has(d.id) })));
+        setReels(rdata.map((d: any) => ({ ...d, liked: liked.has(d.id) })));
 
         if (user && userId !== user.uid) {
-          const followSnap = await getDocs(query(collection(db, "follows"), where("follower_id", "==", user.uid), where("following_id", "==", userId), limit(1)));
-          setIsFollowing(!followSnap.empty);
+          const { data: followData } = await supabase
+            .from('follows' as any)
+            .select('id')
+            .eq('follower_id', user.uid)
+            .eq('following_id', userId)
+            .limit(1);
+          setIsFollowing(!!(followData as any[])?.length);
           
-          const blockSnap = await getDocs(query(collection(db, "blocks"), where("blocker_id", "==", user.uid), where("blocked_id", "==", userId), limit(1)));
-          setIsBlocked(!blockSnap.empty);
+          const { data: blockData } = await supabase
+            .from('blocks' as any)
+            .select('id')
+            .eq('blocker_id', user.uid)
+            .eq('blocked_id', userId)
+            .limit(1);
+          setIsBlocked(!!(blockData as any[])?.length);
 
-          const muteSnap = await getDocs(query(collection(db, "mutes"), where("muter_id", "==", user.uid), where("muted_id", "==", userId), limit(1)));
-          setIsMuted(!muteSnap.empty);
+          const { data: muteData } = await supabase
+            .from('mutes' as any)
+            .select('id')
+            .eq('muter_id', user.uid)
+            .eq('muted_id', userId)
+            .limit(1);
+          setIsMuted(!!(muteData as any[])?.length);
         }
       }
     })();
@@ -261,20 +222,20 @@ const Profile = () => {
   // ============ Mutations ============
   const toggleBlock = async () => {
     if (!user || !profile) return;
-    const { doc, setDoc, deleteDoc } = await import("firebase/firestore");
     const blockId = `${user.uid}_${profile.user_id}`;
     if (isBlocked) {
-      await deleteDoc(doc(db, "blocks", blockId));
+      await supabase.from('blocks' as any).delete().eq('id', blockId);
       setIsBlocked(false);
       toast.success("Unblocked");
     } else {
       setIsBlocked(true);
       try {
-        await setDoc(doc(db, "blocks", blockId), {
+        await supabase.from('blocks' as any).upsert({
+          id: blockId,
           blocker_id: user.uid,
           blocked_id: profile.user_id,
           created_at: new Date().toISOString()
-        });
+        } as any);
         toast.success("Blocked");
       } catch (e: any) {
         setIsBlocked(false);
@@ -284,20 +245,20 @@ const Profile = () => {
   };
   const toggleMute = async () => {
     if (!user || !profile) return;
-    const { doc, setDoc, deleteDoc } = await import("firebase/firestore");
     const muteId = `${user.uid}_${profile.user_id}`;
     if (isMuted) {
-      await deleteDoc(doc(db, "mutes", muteId));
+      await supabase.from('mutes' as any).delete().eq('id', muteId);
       setIsMuted(false);
       toast.success("Unmuted");
     } else {
       setIsMuted(true);
       try {
-        await setDoc(doc(db, "mutes", muteId), {
+        await supabase.from('mutes' as any).upsert({
+          id: muteId,
           muter_id: user.uid,
           muted_id: profile.user_id,
           created_at: new Date().toISOString()
-        });
+        } as any);
         toast.success("Muted");
       } catch (e: any) {
         setIsMuted(false);
@@ -307,19 +268,19 @@ const Profile = () => {
   };
   const toggleFollow = async () => {
     if (!user || !profile) return;
-    const { doc, setDoc, deleteDoc, serverTimestamp } = await import("firebase/firestore");
     const followId = `${user.uid}_${profile.user_id}`;
     if (isFollowing) {
       setIsFollowing(false);
-      await deleteDoc(doc(db, "follows", followId));
+      await supabase.from('follows' as any).delete().eq('id', followId);
     } else {
       setIsFollowing(true);
       try {
-        await setDoc(doc(db, "follows", followId), {
+        await supabase.from('follows' as any).upsert({
+          id: followId,
           follower_id: user.uid,
           following_id: profile.user_id,
-          created_at: serverTimestamp()
-        });
+          created_at: new Date().toISOString()
+        } as any);
       } catch (e: any) {
         setIsFollowing(false);
         toast.error(e.message);

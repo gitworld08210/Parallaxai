@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { collection, doc, addDoc, updateDoc, getDocs, query, where, orderBy, onSnapshot, serverTimestamp, Unsubscribe } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { createPeer, getUserMedia, stopStream } from "@/lib/webrtc";
 import { toast } from "sonner";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export type CallKind = "voice" | "video";
 export type CallStatus = "idle" | "outgoing" | "incoming" | "connecting" | "connected" | "ended";
@@ -73,8 +73,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
   const pendingIceRef = useRef<RTCIceCandidateInit[]>([]);
   const remoteDescSetRef = useRef(false);
   const ringTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const signalUnsubRef = useRef<Unsubscribe | null>(null);
-  const callRowUnsubRef = useRef<Unsubscribe | null>(null);
+  const signalChannelRef = useRef<RealtimeChannel | null>(null);
+  const callChannelRef = useRef<RealtimeChannel | null>(null);
 
   const cleanup = useCallback(() => {
     if (pcRef.current) {
@@ -91,8 +91,8 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     pendingIceRef.current = [];
     remoteDescSetRef.current = false;
     if (ringTimerRef.current) { clearTimeout(ringTimerRef.current); ringTimerRef.current = null; }
-    if (signalUnsubRef.current) { signalUnsubRef.current(); signalUnsubRef.current = null; }
-    if (callRowUnsubRef.current) { callRowUnsubRef.current(); callRowUnsubRef.current = null; }
+    if (signalChannelRef.current) { supabase.removeChannel(signalChannelRef.current); signalChannelRef.current = null; }
+    if (callChannelRef.current) { supabase.removeChannel(callChannelRef.current); callChannelRef.current = null; }
   }, [localStream, remoteStream]);
 
   const insertSummaryMessage = useCallback(async (conversationId: string, kind: CallKind, finalStatus: string, duration: number) => {
@@ -105,11 +105,12 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     else if (finalStatus === "declined") label = `🚫 ${kind === "video" ? "Video" : "Voice"} call declined`;
     else if (finalStatus === "cancelled") label = `📵 ${kind === "video" ? "Video" : "Voice"} call cancelled`;
     if (!label) return;
-    await addDoc(collection(db, "conversations", conversationId, "messages"), {
+    await supabase.from('messages' as any).insert({
+      conversation_id: conversationId,
       sender_id: user.uid,
       content: label,
-      created_at: serverTimestamp(),
-    });
+      created_at: new Date().toISOString(),
+    } as any);
   }, [user]);
 
   const finishCall = useCallback(async (finalStatus: "ended" | "missed" | "declined" | "cancelled" | "busy") => {
@@ -117,11 +118,11 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     const dur = a ? Math.floor((Date.now() - a.startedAt) / 1000) : 0;
     if (a) {
       try {
-        await updateDoc(doc(db, "calls", a.call_id), {
+        await supabase.from('calls' as any).update({
           status: finalStatus,
           ended_at: new Date().toISOString(),
           duration_sec: finalStatus === "ended" ? dur : 0,
-        });
+        } as any).eq('id', a.call_id);
         if (a.isCaller) await insertSummaryMessage(a.conversation_id, a.kind, finalStatus, dur);
       } catch {}
     }
@@ -132,51 +133,54 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   const sendSignal = useCallback(async (callId: string, toUser: string, kind: "offer" | "answer" | "ice" | "bye", payload: any) => {
     if (!user) return;
-    await addDoc(collection(db, "call_signals"), {
+    await supabase.from('call_signals' as any).insert({
       call_id: callId,
       from_user: user.uid,
       to_user: toUser,
       kind,
       payload,
-      created_at: serverTimestamp(),
-    });
+      created_at: new Date().toISOString(),
+    } as any);
   }, [user]);
 
   const subscribeSignals = useCallback((callId: string, peerId: string, onSignal: (k: string, payload: any) => void) => {
     if (!user) return;
-    const q = query(
-      collection(db, "call_signals"),
-      where("call_id", "==", callId),
-      where("to_user", "==", user.uid),
-      orderBy("created_at", "asc"),
-    );
-    const unsub = onSnapshot(q, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          const row = change.doc.data();
-          if (row.from_user === peerId) {
-            onSignal(row.kind, row.payload);
-          }
+    const channel = supabase.channel(`call-signals-${callId}-${user.uid}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'call_signals',
+        filter: `call_id=eq.${callId}`,
+      }, (payload) => {
+        const row = payload.new as any;
+        if (row.to_user === user.uid && row.from_user === peerId) {
+          onSignal(row.kind, row.payload);
         }
-      });
-    });
-    signalUnsubRef.current = unsub;
+      })
+      .subscribe();
+    signalChannelRef.current = channel;
   }, [user]);
 
   const subscribeCallRow = useCallback((callId: string) => {
-    const callDocRef = doc(db, "calls", callId);
-    const unsub = onSnapshot(callDocRef, (snapshot) => {
-      const row = snapshot.data();
-      if (row && ["ended", "declined", "missed", "cancelled", "busy"].includes(row.status)) {
-        cleanup();
-        setActive(null);
-        setStatus("idle");
-        if (row.status === "declined") toast("Call declined");
-        else if (row.status === "missed") toast("No answer");
-        else if (row.status === "busy") toast("User is busy");
-      }
-    });
-    callRowUnsubRef.current = unsub;
+    const channel = supabase.channel(`call-row-${callId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'calls',
+        filter: `id=eq.${callId}`,
+      }, (payload) => {
+        const row = payload.new as any;
+        if (row && ["ended", "declined", "missed", "cancelled", "busy"].includes(row.status)) {
+          cleanup();
+          setActive(null);
+          setStatus("idle");
+          if (row.status === "declined") toast("Call declined");
+          else if (row.status === "missed") toast("No answer");
+          else if (row.status === "busy") toast("User is busy");
+        }
+      })
+      .subscribe();
+    callChannelRef.current = channel;
   }, [cleanup]);
 
   // ---------- Caller flow ----------
@@ -188,16 +192,17 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       const stream = await getUserMedia(kind === "video");
       setLocalStream(stream);
 
-      const callDocRef = await addDoc(collection(db, "calls"), {
+      const { data: callDoc, error: callErr } = await supabase.from('calls' as any).insert({
         conversation_id: conversationId,
         caller_id: user.uid,
         callee_id: peer.user_id,
         kind,
         status: "ringing",
-        created_at: serverTimestamp(),
-      });
+        created_at: new Date().toISOString(),
+      } as any).select().single();
+      if (callErr) throw callErr;
 
-      const callId = callDocRef.id;
+      const callId = (callDoc as any).id;
       const startedAt = Date.now();
       setActive({ call_id: callId, conversation_id: conversationId, kind, isCaller: true, peer, startedAt });
       setStatus("outgoing");
@@ -334,24 +339,25 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       // Fetch any signals that arrived before subscribing
-      const signalsQuery = query(
-        collection(db, "call_signals"),
-        where("call_id", "==", inc.call_id),
-        where("from_user", "==", inc.caller_id),
-        where("to_user", "==", user.uid),
-        orderBy("created_at", "asc"),
-      );
-      const signalsSnap = await getDocs(signalsQuery);
-      for (const signalDoc of signalsSnap.docs) {
-        const s = signalDoc.data();
-        if (s.kind === "offer" && !pc.currentRemoteDescription) {
-          await pc.setRemoteDescription(new RTCSessionDescription(s.payload));
-          remoteDescSetRef.current = true;
-          const answer = await pc.createAnswer();
-          await pc.setLocalDescription(answer);
-          await sendSignal(inc.call_id, inc.caller_id, "answer", answer);
-        } else if (s.kind === "ice" && remoteDescSetRef.current) {
-          try { await pc.addIceCandidate(new RTCIceCandidate(s.payload)); } catch {}
+      const { data: signalDocs } = await supabase
+        .from('call_signals' as any)
+        .select('*')
+        .eq('call_id', inc.call_id)
+        .eq('from_user', inc.caller_id)
+        .eq('to_user', user.uid)
+        .order('created_at', { ascending: true });
+
+      if (signalDocs) {
+        for (const s of signalDocs as any[]) {
+          if (s.kind === "offer" && !pc.currentRemoteDescription) {
+            await pc.setRemoteDescription(new RTCSessionDescription(s.payload));
+            remoteDescSetRef.current = true;
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            await sendSignal(inc.call_id, inc.caller_id, "answer", answer);
+          } else if (s.kind === "ice" && remoteDescSetRef.current) {
+            try { await pc.addIceCandidate(new RTCIceCandidate(s.payload)); } catch {}
+          }
         }
       }
     } catch (e: any) {

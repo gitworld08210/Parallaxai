@@ -1,23 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { Room, RoomEvent, RemoteTrack, Track } from "livekit-client";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  increment,
-  onSnapshot,
-  orderBy,
-  query,
-  runTransaction,
-  serverTimestamp,
-  updateDoc,
-  where,
-  limit,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 
 import { Button } from "@/components/ui/button";
@@ -59,15 +43,12 @@ export default function LiveViewer() {
 
   const me = user?.id ?? null;
 
-  // Load gift catalog from Firestore
+  // Load gift catalog
   useEffect(() => {
     (async () => {
       try {
-        const snap = await getDocs(collection(db, "gift_catalog"));
-        const items: GiftDef[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as GiftDef[];
+        const { data } = await supabase.from('gift_catalog' as any).select('*');
+        const items: GiftDef[] = (data as any[] || []).map((d: any) => ({ id: d.id, ...d }));
         setCatalog(items);
       } catch (e) {
         console.warn("Could not load gift catalog", e);
@@ -80,9 +61,9 @@ export default function LiveViewer() {
     if (!id) return;
     (async () => {
       try {
-        const streamSnap = await getDoc(doc(db, "live_streams", id));
-        if (!streamSnap.exists()) { toast.error("Stream not found"); navigate(-1); return; }
-        const s = { id: streamSnap.id, ...streamSnap.data() } as Stream;
+        const { data: streamData } = await supabase.from('live_streams' as any).select('*').eq('id', id).single();
+        if (!streamData) { toast.error("Stream not found"); navigate(-1); return; }
+        const s = streamData as any as Stream;
         setStream(s);
         setTips(Number(s.total_gifts ?? 0));
         if (s.status === "ended") { setEnded(true); return; }
@@ -92,22 +73,11 @@ export default function LiveViewer() {
         if (!me) { setAccessState(s.access_type === "ticket" ? "needs_ticket" : "needs_sub"); return; }
 
         if (s.access_type === "ticket") {
-          const ticketQ = query(
-            collection(db, "live_tickets"),
-            where("stream_id", "==", s.id),
-            where("user_id", "==", me)
-          );
-          const ticketSnap = await getDocs(ticketQ);
-          setAccessState(ticketSnap.docs.length > 0 ? "granted" : "needs_ticket");
+          const { data: ticketData } = await supabase.from('live_tickets' as any).select('id').eq('stream_id', s.id).eq('user_id', me);
+          setAccessState((ticketData as any[] || []).length > 0 ? "granted" : "needs_ticket");
         } else if (s.access_type === "subscribers_only") {
-          const subQ = query(
-            collection(db, "creator_subscriptions"),
-            where("subscriber_id", "==", me),
-            where("creator_id", "==", s.host_id),
-            where("status", "in", ["active", "trialing"])
-          );
-          const subSnap = await getDocs(subQ);
-          setAccessState(subSnap.docs.length > 0 ? "granted" : "needs_sub");
+          const { data: subData } = await supabase.from('creator_subscriptions' as any).select('id').eq('subscriber_id', me).eq('creator_id', s.host_id).in('status', ['active', 'trialing']);
+          setAccessState((subData as any[] || []).length > 0 ? "granted" : "needs_sub");
         }
       } catch (e: any) {
         toast.error("Could not load stream");
@@ -153,58 +123,51 @@ export default function LiveViewer() {
     return () => { mounted = false; roomRef.current?.disconnect(); roomRef.current = null; };
   }, [accessState, stream?.id, ended]);
 
-  // Real-time: chat, gifts, stream status via Firestore onSnapshot
+  // Real-time: chat, gifts, stream status via Supabase
   useEffect(() => {
     if (!id) return;
-    const unsubs: (() => void)[] = [];
+    const channels: any[] = [];
 
-    // Chat listener
-    const chatQ = query(
-      collection(db, "live_chat"),
-      where("stream_id", "==", id),
-      orderBy("created_at", "asc"),
-      limit(100)
-    );
-    unsubs.push(
-      onSnapshot(chatQ, (snap) => {
-        const msgs: ChatRow[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as ChatRow[];
-        setChat(msgs.slice(-50));
-      })
-    );
+    // Chat
+    (async () => {
+      const { data } = await supabase.from('live_chat' as any).select('*').eq('stream_id', id).order('created_at', { ascending: true }).limit(100);
+      if (data) setChat((data as any[]).slice(-50));
+    })();
+    const chatCh = supabase.channel(`viewer-chat-${id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_chat', filter: `stream_id=eq.${id}` }, (p) => {
+        setChat(prev => [...prev, p.new as any].slice(-50));
+      }).subscribe();
+    channels.push(chatCh);
 
-    // Gifts listener
-    const giftsQ = query(
-      collection(db, "live_gifts"),
-      where("stream_id", "==", id),
-      orderBy("created_at", "desc"),
-      limit(20)
-    );
-    unsubs.push(
-      onSnapshot(giftsQ, (snap) => {
-        const allGifts: GiftEvent[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as GiftEvent[];
+    // Gifts
+    (async () => {
+      const { data } = await supabase.from('live_gifts' as any).select('*').eq('stream_id', id).order('created_at', { ascending: false }).limit(20);
+      if (data) {
+        const allGifts = data as any[];
         setGifts(allGifts.slice(0, 8));
-        const totalCoins = allGifts.reduce((sum, g) => sum + Number(g.coins_total || 0), 0);
+        const totalCoins = allGifts.reduce((sum: number, g: any) => sum + Number(g.coins_total || 0), 0);
         setTips(totalCoins);
-      })
-    );
+      }
+    })();
+    const giftCh = supabase.channel(`viewer-gifts-${id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_gifts', filter: `stream_id=eq.${id}` }, (p) => {
+        const g = p.new as any;
+        setGifts(prev => [g, ...prev].slice(0, 8));
+        setTips(prev => prev + Number(g.coins_total || 0));
+        const gift = catalog.find(c => c.id === g.gift_id);
+        if (gift) setFlying(f => [...f, { id: gift.id, icon: gift.icon, key: Date.now() + Math.random() }]);
+      }).subscribe();
+    channels.push(giftCh);
 
-    // Stream doc listener (detect ended + viewer count)
-    unsubs.push(
-      onSnapshot(doc(db, "live_streams", id), (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data.status === "ended") setEnded(true);
-        }
-      })
-    );
+    // Stream status
+    const streamCh = supabase.channel(`viewer-stream-${id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_streams', filter: `id=eq.${id}` }, (p) => {
+        const data = p.new as any;
+        if (data.status === "ended") setEnded(true);
+      }).subscribe();
+    channels.push(streamCh);
 
-    return () => unsubs.forEach((u) => u());
+    return () => channels.forEach((ch) => supabase.removeChannel(ch));
   }, [id, catalog]);
 
   useEffect(() => {
@@ -224,12 +187,12 @@ export default function LiveViewer() {
     const body = text.trim();
     setText("");
     try {
-      await addDoc(collection(db, "live_chat"), {
+      await supabase.from('live_chat' as any).insert({
         stream_id: id,
         user_id: me,
         body,
-        created_at: serverTimestamp(),
-      });
+        created_at: new Date().toISOString(),
+      } as any);
     } catch (e) {
       console.warn("Failed to send chat message", e);
     }
@@ -244,35 +207,28 @@ export default function LiveViewer() {
     if (!stream || !me) return;
     setBuying(true);
     try {
-      // TODO: Move wallet transfer logic to a Firebase Cloud Function for production security.
-      // Client-side runTransaction prevents double-spend but cannot enforce authorization on the recipient credit.
-      const viewerWalletRef = doc(db, "wallets", me);
-      const hostWalletRef = doc(db, "wallets", stream.host_id);
-
-      await runTransaction(db, async (transaction) => {
-        const viewerSnap = await transaction.get(viewerWalletRef);
-        const currentBalance = viewerSnap.exists() ? (viewerSnap.data().total || 0) : 0;
-        if (currentBalance < stream.ticket_price_coins) {
-          throw new Error("Insufficient coins - top up in Wallet");
-        }
-        const hostSnap = await transaction.get(hostWalletRef);
-        const hostBalance = hostSnap.exists() ? (hostSnap.data().total || 0) : 0;
-
-        transaction.update(viewerWalletRef, { total: currentBalance - stream.ticket_price_coins });
-        if (hostSnap.exists()) {
-          transaction.update(hostWalletRef, { total: hostBalance + stream.ticket_price_coins });
-        } else {
-          transaction.set(hostWalletRef, { user_id: stream.host_id, total: stream.ticket_price_coins });
-        }
-      });
-
-      // Create ticket record (outside transaction - non-critical)
-      await addDoc(collection(db, "live_tickets"), {
+      // Get viewer balance
+      const { data: viewerWallet } = await supabase.from('wallets' as any).select('total').eq('user_id', me).maybeSingle();
+      const currentBalance = (viewerWallet as any)?.total || 0;
+      if (currentBalance < stream.ticket_price_coins) {
+        throw new Error("Insufficient coins - top up in Wallet");
+      }
+      // Deduct from viewer
+      await supabase.from('wallets' as any).update({ total: currentBalance - stream.ticket_price_coins } as any).eq('user_id', me);
+      // Credit host
+      const { data: hostWallet } = await supabase.from('wallets' as any).select('total').eq('user_id', stream.host_id).maybeSingle();
+      if (hostWallet) {
+        await supabase.from('wallets' as any).update({ total: (hostWallet as any).total + stream.ticket_price_coins } as any).eq('user_id', stream.host_id);
+      } else {
+        await supabase.from('wallets' as any).insert({ user_id: stream.host_id, total: stream.ticket_price_coins } as any);
+      }
+      // Create ticket record
+      await supabase.from('live_tickets' as any).insert({
         stream_id: stream.id,
         user_id: me,
         coins_paid: stream.ticket_price_coins,
-        created_at: serverTimestamp(),
-      });
+        created_at: new Date().toISOString(),
+      } as any);
       toast.success("Unlocked!");
       setAccessState("granted");
     } catch (e: any) {
@@ -284,48 +240,37 @@ export default function LiveViewer() {
 
   const sendGift = async (g: GiftDef) => {
     if (!stream || !me) return;
-    // Self-gift guard: prevent host from gifting themselves
     if (me === stream.host_id) {
       toast.error("Cannot gift yourself");
       return;
     }
     setGiftSheet(false);
     try {
-      // TODO: Move wallet transfer logic to a Firebase Cloud Function for production security.
-      // Client-side runTransaction prevents double-spend but cannot enforce authorization on the recipient credit.
-      const viewerWalletRef = doc(db, "wallets", me);
-      const hostWalletRef = doc(db, "wallets", stream.host_id);
-      const streamRef = doc(db, "live_streams", stream.id);
-
-      await runTransaction(db, async (transaction) => {
-        const viewerSnap = await transaction.get(viewerWalletRef);
-        const currentBalance = viewerSnap.exists() ? (viewerSnap.data().total || 0) : 0;
-        if (currentBalance < g.cost_coins) {
-          throw new Error("Insufficient coins - top up in Wallet");
-        }
-        const hostSnap = await transaction.get(hostWalletRef);
-        const hostBalance = hostSnap.exists() ? (hostSnap.data().total || 0) : 0;
-
-        transaction.update(viewerWalletRef, { total: currentBalance - g.cost_coins });
-        if (hostSnap.exists()) {
-          transaction.update(hostWalletRef, { total: hostBalance + g.cost_coins });
-        } else {
-          transaction.set(hostWalletRef, { user_id: stream.host_id, total: g.cost_coins });
-        }
-
-        // Record the gift event inside the transaction for atomicity
-        const giftRef = doc(collection(db, "live_gifts"));
-        transaction.set(giftRef, {
-          stream_id: stream.id,
-          gift_id: g.id,
-          sender_id: me,
-          coins_total: g.cost_coins,
-          created_at: serverTimestamp(),
-        });
-
-        // Increment stream total_gifts inside the transaction
-        transaction.update(streamRef, { total_gifts: increment(g.cost_coins) });
-      });
+      // Get viewer balance
+      const { data: viewerWallet } = await supabase.from('wallets' as any).select('total').eq('user_id', me).maybeSingle();
+      const currentBalance = (viewerWallet as any)?.total || 0;
+      if (currentBalance < g.cost_coins) {
+        throw new Error("Insufficient coins - top up in Wallet");
+      }
+      // Deduct from viewer
+      await supabase.from('wallets' as any).update({ total: currentBalance - g.cost_coins } as any).eq('user_id', me);
+      // Credit host
+      const { data: hostWallet } = await supabase.from('wallets' as any).select('total').eq('user_id', stream.host_id).maybeSingle();
+      if (hostWallet) {
+        await supabase.from('wallets' as any).update({ total: (hostWallet as any).total + g.cost_coins } as any).eq('user_id', stream.host_id);
+      } else {
+        await supabase.from('wallets' as any).insert({ user_id: stream.host_id, total: g.cost_coins } as any);
+      }
+      // Record the gift event
+      await supabase.from('live_gifts' as any).insert({
+        stream_id: stream.id,
+        gift_id: g.id,
+        sender_id: me,
+        coins_total: g.cost_coins,
+        created_at: new Date().toISOString(),
+      } as any);
+      // Increment stream total_gifts
+      await supabase.from('live_streams' as any).update({ total_gifts: (stream.total_gifts || 0) + g.cost_coins } as any).eq('id', stream.id);
 
       // Local animation
       setFlying((f) => [...f, { id: g.id, icon: g.icon, key: Date.now() + Math.random() }]);

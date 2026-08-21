@@ -2,7 +2,7 @@
   "id": "FEAT-004",
   "type": "feat",
   "description": "Migrate remaining Firebase-dependent files: admin panels, CallProvider, push notifications, error reporting, platform services. Replace Firebase Storage with Cloudinary for avatar upload. Remove Firebase dependencies entirely.",
-  "status": "pending",
+  "status": "in_progress",
   "steps": [
     "Migrate src/services/platform/platform.ts: Remove Firestore import and addDoc for admin_audit_logs. The function already writes to Supabase as secondary - make that the only write. Remove all firebase/firestore imports.",
     "Migrate src/hooks/usePushNotifications.ts: Replace Firestore setDoc to push_tokens with supabase.from('push_tokens').upsert(). Remove firebase/firestore and @/lib/firebase imports.",

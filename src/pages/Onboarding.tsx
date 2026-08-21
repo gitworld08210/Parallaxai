@@ -2,20 +2,8 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthProvider";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { uploadToCloudinary } from "@/lib/cloudinary";
-import {
-  collection,
-  doc,
-  getDocs,
-  query,
-  where,
-  limit,
-  setDoc,
-  updateDoc,
-  writeBatch,
-  serverTimestamp,
-} from "firebase/firestore";
 import { toast } from "sonner";
 import {
   Palette,
@@ -100,22 +88,20 @@ const Onboarding = () => {
   const fetchCreators = async () => {
     setLoadingCreators(true);
     try {
-      const q = query(
-        collection(db, "profiles"),
-        where("is_creator", "==", true),
-        limit(20)
-      );
-      const snap = await getDocs(q);
+      const { data } = await supabase
+        .from('profiles')
+        .select('user_id, display_name, username, avatar_url, bio')
+        .eq('is_creator', true)
+        .limit(20);
       const results: CreatorProfile[] = [];
-      snap.forEach((doc) => {
-        const data = doc.data();
-        if (doc.id !== user?.id) {
+      (data as any[] || []).forEach((row: any) => {
+        if (row.user_id !== user?.id) {
           results.push({
-            id: doc.id,
-            display_name: data.display_name || "Creator",
-            username: data.username || "",
-            avatar_url: data.avatar_url || null,
-            bio: data.bio || null,
+            id: row.user_id,
+            display_name: row.display_name || "Creator",
+            username: row.username || "",
+            avatar_url: row.avatar_url || null,
+            bio: row.bio || null,
           });
         }
       });
@@ -166,29 +152,29 @@ const Onboarding = () => {
         }
       }
 
-      // Use a batch write to ensure all Firestore operations succeed or fail atomically
-      const batch = writeBatch(db);
-
-      // (a) Save selected interests to user_interests/{userId}
+      // (a) Save selected interests to user_interests
       const interestsMap: Record<string, number> = {};
       for (const topic of selectedTopics) {
         interestsMap[topic] = 1.0;
       }
-      batch.set(doc(db, "user_interests", user.id), interestsMap);
+      await supabase.from('user_interests' as any).upsert({
+        user_id: user.id,
+        scores: interestsMap,
+      } as any);
 
       // (b) Create follow documents for each followed creator
-      for (const creatorId of followedCreators) {
-        const followRef = doc(collection(db, "follows"));
-        batch.set(followRef, {
+      if (followedCreators.length) {
+        const followRows = followedCreators.map((creatorId) => ({
           follower_id: user.id,
           following_id: creatorId,
-          created_at: serverTimestamp(),
-        });
+          created_at: new Date().toISOString(),
+        }));
+        await supabase.from('follows' as any).insert(followRows as any);
       }
 
       // (c) Update profile with onboarded_at and optional avatar/bio
       const profileUpdate: Record<string, any> = {
-        onboarded_at: serverTimestamp(),
+        onboarded_at: new Date().toISOString(),
         interests: selectedTopics,
       };
 
@@ -200,10 +186,7 @@ const Onboarding = () => {
         profileUpdate.bio = bio.trim();
       }
 
-      batch.update(doc(db, "profiles", user.id), profileUpdate);
-
-      // Commit all writes atomically
-      await batch.commit();
+      await supabase.from('profiles').update(profileUpdate as any).eq('user_id', user.id);
       await refreshProfile();
 
       toast.success("Welcome to Parallax!");

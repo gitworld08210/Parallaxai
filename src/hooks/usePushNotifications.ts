@@ -4,8 +4,7 @@ import {
   PushNotifications,
   type PluginListenerHandle,
 } from "@capacitor/push-notifications";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 
 export const usePushNotifications = () => {
@@ -27,15 +26,12 @@ export const usePushNotifications = () => {
             if (disposed) return;
             setToken(registration.value);
             try {
-              await setDoc(
-                doc(db, "push_tokens", userId, "tokens", registration.value),
-                {
-                  token: registration.value,
-                  platform: Capacitor.getPlatform(),
-                  updated_at: serverTimestamp(),
-                },
-                { merge: true }
-              );
+              await supabase.from('push_tokens' as any).upsert({
+                user_id: userId,
+                token: registration.value,
+                platform: Capacitor.getPlatform(),
+                updated_at: new Date().toISOString(),
+              } as any, { onConflict: 'user_id,token' });
             } catch (error) {
               console.warn("Push token persistence failed:", error);
             }

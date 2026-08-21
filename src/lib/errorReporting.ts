@@ -1,6 +1,4 @@
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { getFirestore } from "firebase/firestore";
-import app from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || "0.0.0";
 
@@ -27,7 +25,7 @@ export interface ErrorContext {
 }
 
 /**
- * Reports an error to Firestore 'error_logs' collection.
+ * Reports an error to Supabase 'error_logs' table.
  * Fire-and-forget: silently catches any write failures.
  * Rate-limited to max 10 errors per minute per client.
  */
@@ -37,19 +35,15 @@ export function reportError(error: Error, context?: ErrorContext): void {
   }
 
   try {
-    const db = getFirestore(app);
-    const errorData = {
+    supabase.from('error_logs' as any).insert({
       message: error.message || String(error),
       stack: error.stack || null,
       user_id: context?.userId || null,
       page: context?.page || window.location.pathname,
-      timestamp: serverTimestamp(),
       device: navigator.userAgent,
       app_version: APP_VERSION,
-      ...(context?.extra ? { extra: context.extra } : {}),
-    };
-
-    addDoc(collection(db, "error_logs"), errorData).catch(() => {});
+      extra: context?.extra || null,
+    } as any).then(() => {}).catch(() => {});
   } catch {
     // Silently ignore any errors during reporting
   }

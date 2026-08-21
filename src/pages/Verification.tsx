@@ -39,24 +39,11 @@ const Verification = () => {
     if (!user) return;
     (async () => {
       try {
-        // 1. Check Firestore
-        const { collection, query, where, getDocs } = await import("firebase/firestore");
-        const { db } = await import("@/lib/firebase");
-        const q = query(collection(db, "verification_requests"), where("user_id", "==", user.id));
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          const doc = snap.docs[0];
-          setExisting({ id: doc.id, ...doc.data() } as VR);
-          setLoading(false);
-          return;
-        }
+        const { data } = await supabase.from("verification_requests" as any).select("id, status, category, created_at").eq("user_id", user.id).maybeSingle();
+        setExisting((data as unknown as VR) ?? null);
       } catch (e) {
-        console.warn("Firestore verification fetch failed", e);
+        console.warn("Verification fetch failed", e);
       }
-
-      // 2. Supabase Fallback
-      const { data } = await supabase.from("verification_requests" as any).select("id, status, category, created_at").eq("user_id", user.id).maybeSingle();
-      setExisting((data as unknown as VR) ?? null);
       setLoading(false);
     })();
   }, [user?.id]);
@@ -94,20 +81,10 @@ const Verification = () => {
         supporting_doc_url: supportPath,
       };
 
-      try {
-        // 1. Dual-write to Firestore
-        const { collection, addDoc, serverTimestamp } = await import("firebase/firestore");
-        const { db: firestoreDb } = await import("@/lib/firebase");
-        await addDoc(collection(firestoreDb, "verification_requests"), {
-          ...payload,
-          created_at: serverTimestamp(),
-        });
-      } catch (e) {
-        console.warn("Firestore verification submission failed", e);
-      }
-
-      // 2. Supabase Insert (Legacy/Admin OS trigger)
-      const { data: inserted, error } = await supabase.from("verification_requests" as any).insert(payload as any).select("id").maybeSingle();
+      const { data: inserted, error } = await supabase.from("verification_requests" as any).insert({
+        ...payload,
+        created_at: new Date().toISOString(),
+      } as any).select("id").maybeSingle();
       if (error) throw error;
 
       

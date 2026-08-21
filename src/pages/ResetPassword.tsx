@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { auth } from "@/lib/firebase";
-import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CheckCircle2, AlertCircle } from "lucide-react";
 
@@ -15,17 +14,24 @@ const ResetPassword = () => {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("oobCode");
-    if (code) {
-      setOobCode(code);
-      verifyPasswordResetCode(auth, code)
-        .then(() => setValidCode(true))
-        .catch((err) => {
-          console.error(err);
-          setValidCode(false);
-          toast.error("Invalid or expired reset link");
-        });
+    // Supabase handles password reset via its own flow
+    // The hash fragment contains the access token after email link click
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get("access_token");
+    const type = hashParams.get("type");
+    if (type === "recovery" && accessToken) {
+      setOobCode(accessToken);
+      setValidCode(true);
+    } else {
+      // Fallback: check query params
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("oobCode") || params.get("code");
+      if (code) {
+        setOobCode(code);
+        setValidCode(true);
+      } else {
+        setValidCode(false);
+      }
     }
   }, []);
 
@@ -35,7 +41,8 @@ const ResetPassword = () => {
     
     setBusy(true);
     try {
-      await confirmPasswordReset(auth, oobCode, password);
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
       setSuccess(true);
       toast.success("Password updated successfully");
       setTimeout(() => nav("/auth"), 3000);

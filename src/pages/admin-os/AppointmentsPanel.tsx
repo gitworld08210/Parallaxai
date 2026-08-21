@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { TopBar } from "@/components/vibe/TopBar";
 import { useAuth } from "@/contexts/AuthProvider";
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { UserPlus, Shield, Briefcase, FileText, Check, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -37,7 +36,7 @@ const AppointmentsPanel = () => {
 
     setLoading(true);
     try {
-      // 1. Create Onboarding Session in Firestore
+      // Create Onboarding Session in Supabase
       const sessionData = {
         email: email.trim(),
         role,
@@ -45,15 +44,14 @@ const AppointmentsPanel = () => {
         salary_offered: parseFloat(salary) || 0,
         appointed_by: user?.id,
         status: 'pending_onboarding',
-        created_at: serverTimestamp(),
+        created_at: new Date().toISOString(),
         joining_letter_url: null,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
       };
 
-      const docRef = await addDoc(collection(db, "onboarding_sessions"), sessionData);
+      const { error } = await supabase.from('onboarding_sessions' as any).insert(sessionData as any);
+      if (error) throw error;
       
-      // 2. Mock calling the edge function for join letter generation
-      // In a real app, this would trigger a Firebase Function or Supabase Edge Function
       toast.success(`Appointment invitation sent to ${email}`);
       
       setEmail("");

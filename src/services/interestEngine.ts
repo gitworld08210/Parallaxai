@@ -1,5 +1,4 @@
-import { collection, doc, getDoc, setDoc, addDoc, updateDoc, increment, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 export type SignalType = "watch_time" | "like" | "save" | "share" | "profile_visit";
 
@@ -8,7 +7,7 @@ export interface EngagementEvent {
   post_id: string;
   signal_type: SignalType;
   topic_tags: string[];
-  timestamp: ReturnType<typeof serverTimestamp>;
+  timestamp: string;
 }
 
 export interface InterestVector {
@@ -25,7 +24,7 @@ export interface ScoredPost {
 }
 
 /**
- * Writes an engagement event to Firestore `engagement_events/{eventId}`.
+ * Writes an engagement event to Supabase `engagement_events` table.
  */
 export async function trackEngagement(
   userId: string,
@@ -33,37 +32,52 @@ export async function trackEngagement(
   signal: SignalType,
   topicTags: string[]
 ): Promise<void> {
-  await addDoc(collection(db, "engagement_events"), {
+  await supabase.from("engagement_events" as any).insert({
     user_id: userId,
     post_id: postId,
     signal_type: signal,
     topic_tags: topicTags,
-    timestamp: serverTimestamp(),
-  });
+    timestamp: new Date().toISOString(),
+  } as any);
 }
 
 /**
- * Updates `user_interests/{userId}` document, incrementing a topic score by delta.
- * Uses Firestore `increment()` for atomic updates, avoiding read-modify-write races.
+ * Updates `user_interests` for a user, incrementing a topic score by delta.
  */
 export async function updateInterestVector(
   userId: string,
   topic: string,
   delta: number
 ): Promise<void> {
-  const docRef = doc(db, "user_interests", userId);
-  await setDoc(docRef, { [topic]: increment(delta) }, { merge: true });
+  // Fetch current value
+  const { data: existing } = await supabase
+    .from("user_interests" as any)
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const current = (existing as any) || {};
+  const scores = current.scores || {};
+  scores[topic] = (scores[topic] || 0) + delta;
+
+  await supabase.from("user_interests" as any).upsert({
+    user_id: userId,
+    scores,
+  } as any);
 }
 
 /**
- * Reads `user_interests/{userId}` and returns the topic scores map.
+ * Reads user interests and returns the topic scores map.
  */
 export async function getInterestVector(userId: string): Promise<InterestVector> {
-  const docRef = doc(db, "user_interests", userId);
-  const snap = await getDoc(docRef);
+  const { data } = await supabase
+    .from("user_interests" as any)
+    .select("scores")
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  if (snap.exists()) {
-    return snap.data() as InterestVector;
+  if (data && (data as any).scores) {
+    return (data as any).scores as InterestVector;
   }
   return {};
 }

@@ -5,8 +5,7 @@ import { Calendar, FileText, ChevronLeft, Trash2, Send } from "lucide-react";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
 import { timeAgo } from "@/lib/format";
-import { collection, query, where, orderBy, getDocs, updateDoc, deleteDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 type Draft = {
   id: string;
@@ -29,51 +28,43 @@ const Drafts = () => {
     if (!user) return;
     setLoading(true);
     try {
-      // Query drafts
-      const draftsQuery = query(
-        collection(db, "posts"),
-        where("user_id", "==", user.id),
-        where("status", "==", "draft"),
-        orderBy("created_at", "desc")
-      );
-      // Query scheduled
-      const scheduledQuery = query(
-        collection(db, "posts"),
-        where("user_id", "==", user.id),
-        where("status", "==", "scheduled"),
-        orderBy("created_at", "desc")
-      );
+      const { data: draftsData } = await supabase
+        .from('posts' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'draft')
+        .order('created_at', { ascending: false });
 
-      const [draftsSnap, scheduledSnap] = await Promise.all([
-        getDocs(draftsQuery),
-        getDocs(scheduledQuery),
-      ]);
+      const { data: scheduledData } = await supabase
+        .from('posts' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'scheduled')
+        .order('created_at', { ascending: false });
 
       const results: Draft[] = [];
 
-      draftsSnap.docs.forEach((d) => {
-        const data = d.data();
+      (draftsData as any[] || []).forEach((data: any) => {
         results.push({
-          id: d.id,
+          id: data.id,
           content: data.content || "",
           media_url: data.media_url || null,
           media_type: data.media_type || null,
           status: "draft",
           scheduled_for: data.scheduled_for || null,
-          created_at: data.created_at?.toDate?.() ? data.created_at.toDate().toISOString() : data.created_at || new Date().toISOString(),
+          created_at: data.created_at || new Date().toISOString(),
         });
       });
 
-      scheduledSnap.docs.forEach((d) => {
-        const data = d.data();
+      (scheduledData as any[] || []).forEach((data: any) => {
         results.push({
-          id: d.id,
+          id: data.id,
           content: data.content || "",
           media_url: data.media_url || null,
           media_type: data.media_type || null,
           status: "scheduled",
           scheduled_for: data.scheduled_for || null,
-          created_at: data.created_at?.toDate?.() ? data.created_at.toDate().toISOString() : data.created_at || new Date().toISOString(),
+          created_at: data.created_at || new Date().toISOString(),
         });
       });
 
@@ -92,7 +83,7 @@ const Drafts = () => {
 
   const publishNow = async (id: string) => {
     try {
-      await updateDoc(doc(db, "posts", id), { status: "published", scheduled_for: null });
+      await supabase.from('posts' as any).update({ status: "published", scheduled_for: null } as any).eq('id', id);
       toast.success("Published");
       load();
     } catch (e: any) {
@@ -103,7 +94,7 @@ const Drafts = () => {
   const remove = async (id: string) => {
     if (!confirm("Delete this draft?")) return;
     try {
-      await deleteDoc(doc(db, "posts", id));
+      await supabase.from('posts' as any).delete().eq('id', id);
       setItems((arr) => arr.filter((i) => i.id !== id));
     } catch (e: any) {
       toast.error(e.message || "Failed to delete");

@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { auth, db, storage } from "@/lib/firebase";
-import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { supabase } from "@/integrations/supabase/client";
+import { uploadToCloudinary } from "@/lib/cloudinary";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
 import { Camera, User, AtSign, MapPin, Link as LinkIcon } from "lucide-react";
@@ -27,8 +26,12 @@ const ProfileCreation = () => {
       setLoading(true);
       try {
         if (!user) return;
-        const snap = await getDoc(doc(db, "profiles", user.uid));
-        if (snap.exists() && (snap.data().display_name || snap.data().username)) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('display_name, username')
+          .eq('user_id', user.uid)
+          .maybeSingle();
+        if (profileData && (profileData.display_name || profileData.username)) {
           nav("/", { replace: true });
         }
       } finally {
@@ -56,12 +59,10 @@ const ProfileCreation = () => {
 
     setBusy(true);
     try {
-      let avatarUrl = null;
+      let avatarUrl: string | null = null;
       if (avatar) {
         try {
-          const avatarRef = ref(storage, `avatars/${user.uid}_${Date.now()}`);
-          await uploadBytes(avatarRef, avatar);
-          avatarUrl = await getDownloadURL(avatarRef);
+          avatarUrl = await uploadToCloudinary(avatar);
         } catch (upErr) {
           console.warn("Avatar upload skipped:", upErr);
         }
@@ -82,20 +83,21 @@ const ProfileCreation = () => {
         bio: bio.trim(),
         location: location.trim(),
         website: website.trim(),
-        updated_at: serverTimestamp(),
-        onboarded_at: serverTimestamp(),
+        updated_at: new Date().toISOString(),
+        onboarded_at: new Date().toISOString(),
       };
       if (avatarUrl) profileData.avatar_url = avatarUrl;
 
-      await setDoc(doc(db, "profiles", user.uid), profileData, { merge: true });
+      await supabase.from('profiles').upsert(profileData);
 
-      // Username index is best-effort — never block onboarding on it
+      // Username index is best-effort
       try {
-        await setDoc(doc(db, "usernames", finalUsername), {
+        await supabase.from('usernames' as any).upsert({
+          username: finalUsername,
           user_id: user.uid,
           uid: user.uid,
-          updated_at: serverTimestamp(),
-        }, { merge: true });
+          updated_at: new Date().toISOString(),
+        } as any);
       } catch (idxErr) {
         console.warn("Username index skipped:", idxErr);
       }

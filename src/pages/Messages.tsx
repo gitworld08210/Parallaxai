@@ -7,8 +7,6 @@ import { motion } from "framer-motion";
 import { AuraAvatar } from "@/components/vibe/AuraAvatar";
 import { VerificationBadge } from "@/components/vibe/VerificationBadge";
 import { EmptyState } from "@/components/empty/EmptyState";
-import { collection, query as firestoreQuery, where, orderBy, limit, onSnapshot, getDocs, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
 import { useAuth } from "@/contexts/AuthProvider";
 import { gradientFor, initialsOf } from "@/lib/format";
@@ -69,39 +67,41 @@ const Messages = () => {
     if (!user) return;
     setLoading(true);
     
-    // In Firestore, we should have a 'conversations' collection where each doc has a 'member_ids' array.
-    const q = firestoreQuery(
-      collection(db, "conversations"),
-      where("member_ids", "array-contains", user.id),
-      orderBy("last_message_at", "desc")
-    );
+    const { data } = await supabase
+      .from('conversations' as any)
+      .select('*')
+      .contains('member_ids', [user.id])
+      .order('last_message_at', { ascending: false });
 
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setConvs(snap.docs.map(doc => {
-        const d = doc.data();
-        return {
-          id: doc.id,
-          last_message_at: d.last_message_at?.toDate()?.toISOString() || new Date().toISOString(),
-          is_group: !!d.is_group,
-          title: d.title || null,
-          avatar_url: d.avatar_url || null,
-          members: d.members || [], // Hydrated members list or fetch separately if needed
-          last: d.last_message_text || null,
-          last_sender_id: d.last_sender_id || null,
-          last_read: !!d.last_read,
-          unread: d.unread_counts?.[user.id] || 0,
-        };
-      }));
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
+    if (data) {
+      setConvs((data as any[]).map((d: any) => ({
+        id: d.id,
+        last_message_at: d.last_message_at || new Date().toISOString(),
+        is_group: !!d.is_group,
+        title: d.title || null,
+        avatar_url: d.avatar_url || null,
+        members: d.members || [],
+        last: d.last_message_text || null,
+        last_sender_id: d.last_sender_id || null,
+        last_read: !!d.last_read,
+        unread: d.unread_counts?.[user.id] || 0,
+      })));
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
-    let unsub: (() => void) | undefined;
-    load().then(u => unsub = u);
-    return () => unsub?.();
+    load();
+
+    // Real-time subscription for conversation updates
+    if (!user) return;
+    const channel = supabase.channel('user-conversations')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, () => {
+        load();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
 
   useEffect(() => {
@@ -110,16 +110,14 @@ const Messages = () => {
     let cancelled = false;
     const t = setTimeout(async () => {
       try {
-        const profQ = firestoreQuery(
-          collection(db, "profiles"),
-          where("username", ">=", q.toLowerCase()),
-          where("username", "<=", q.toLowerCase() + "\uf8ff"),
-          limit(12)
-        );
-        const snap = await getDocs(profQ);
-        if (!cancelled) setResults(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any);
+        const { data } = await supabase
+          .from('profiles')
+          .select('user_id, username, display_name, avatar_url, verification_kind')
+          .ilike('username', `%${q.toLowerCase()}%`)
+          .limit(12);
+        if (!cancelled && data) setResults(data as any);
       } catch (e) {
-        console.warn("Firestore search failed", e);
+        console.warn("Profile search failed", e);
       }
     }, 220);
     return () => { cancelled = true; clearTimeout(t); };
@@ -148,14 +146,14 @@ const Messages = () => {
     if (!user) return;
     setStarting(true);
     try {
-      // Check if conversation already exists in Firestore
-      const q = firestoreQuery(
-        collection(db, "conversations"),
-        where("is_group", "==", false),
-        where("member_ids", "array-contains", user.id)
-      );
-      const snap = await getDocs(q);
-      const existing = snap.docs.find(doc => (doc.data() as any).member_ids.includes(otherId));
+      // Check if conversation already exists
+      const { data: existingConvs } = await supabase
+        .from('conversations' as any)
+        .select('*')
+        .eq('is_group', false)
+        .contains('member_ids', [user.id]);
+
+      const existing = (existingConvs as any[] || []).find((c: any) => c.member_ids?.includes(otherId));
       
       if (existing) {
         setComposerOpen(false);
@@ -165,17 +163,18 @@ const Messages = () => {
       }
 
       // Create new DM
-      const docRef = await addDoc(collection(db, "conversations"), {
+      const { data: newConv, error } = await supabase.from('conversations' as any).insert({
         member_ids: [user.uid, otherId],
         is_group: false,
-        created_at: serverTimestamp(),
-        last_message_at: serverTimestamp(),
-        members: [] 
-      });
+        created_at: new Date().toISOString(),
+        last_message_at: new Date().toISOString(),
+        members: []
+      } as any).select().single();
+      if (error) throw error;
       
       setComposerOpen(false);
       setComposerQuery("");
-      nav(`/messages/${docRef.id}`);
+      nav(`/messages/${(newConv as any).id}`);
     } catch (e: any) { toast.error(e.message || "Action failed"); } finally {
       setStarting(false);
     }

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthProvider";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { TopBar } from "@/components/vibe/TopBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { VerificationBadge } from "@/components/vibe/VerificationBadge";
@@ -9,7 +8,6 @@ import { ShieldCheck, UserCheck, AlertCircle, Clock, CheckCircle2, XCircle } fro
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { updateDoc, doc, runTransaction } from "firebase/firestore";
 
 const VerificationQueue = () => {
   const { user } = useAuth();
@@ -17,38 +15,54 @@ const VerificationQueue = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "verification_requests"),
-      orderBy("created_at", "desc")
-    );
-
-    const unsub = onSnapshot(q, (snap) => {
-      setRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    // Initial fetch
+    const fetchRequests = async () => {
+      const { data } = await supabase
+        .from('verification_requests' as any)
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (data) setRequests(data as any[]);
       setLoading(false);
-    });
+    };
+    fetchRequests();
 
-    return () => unsub();
+    // Real-time subscription
+    const channel = supabase.channel('admin-verification-queue')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setRequests(prev => [payload.new as any, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setRequests(prev => prev.map(r => r.id === (payload.new as any).id ? payload.new as any : r));
+        } else if (payload.eventType === 'DELETE') {
+          setRequests(prev => prev.filter(r => r.id !== (payload.old as any).id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleAction = async (req: any, status: 'approved' | 'rejected') => {
     try {
-      await runTransaction(db, async (transaction) => {
-        const reqRef = doc(db, "verification_requests", req.id);
-        const profileRef = doc(db, "profiles", req.user_id);
+      // Update verification request
+      const { error: reqErr } = await supabase.from('verification_requests' as any).update({
+        status,
+        reviewed_at: new Date().toISOString(),
+        reviewer_id: user?.id,
+      } as any).eq('id', req.id);
+      if (reqErr) throw reqErr;
 
-        transaction.update(reqRef, {
-          status,
-          reviewed_at: new Date().toISOString(),
-          reviewer_id: user?.id
-        });
+      // If approved, update the profile
+      if (status === 'approved') {
+        const { error: profileErr } = await supabase.from('profiles').update({
+          verified: true,
+          verification_kind: req.kind || 'verified',
+        } as any).eq('user_id', req.user_id);
+        if (profileErr) throw profileErr;
+      }
 
-        if (status === 'approved') {
-          transaction.update(profileRef, {
-            verified: true,
-            verification_kind: req.kind || 'verified'
-          });
-        }
-      });
       toast.success(`Request ${status}`);
     } catch (e: any) {
       toast.error(e.message);

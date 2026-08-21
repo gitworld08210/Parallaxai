@@ -4,8 +4,7 @@ import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
 import { Bell, Heart, MessageCircle, UserPlus, Info, CheckCircle2, ChevronRight, X, UserCheck, Briefcase } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { collection, query, where, orderBy, limit, onSnapshot, updateDoc, doc, getDocs, writeBatch } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { IncomingInvitesList } from "@/components/organization/members/IncomingInvitesList";
 import { cn } from "@/lib/utils";
 
@@ -15,18 +14,31 @@ const Notifications = () => {
 
   useEffect(() => {
     if (!user) return;
-    const q = query(
-      collection(db, "notifications"),
-      where("user_id", "==", user.id),
-      orderBy("created_at", "desc"),
-      limit(80)
-    );
+    
+    // Initial fetch
+    const fetchNotifications = async () => {
+      const { data } = await supabase
+        .from('notifications' as any)
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(80);
+      if (data) setItems(data as any[]);
+    };
+    fetchNotifications();
 
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    });
+    // Real-time subscription
+    const channel = supabase.channel('user-notifications')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setItems(prev => [payload.new as any, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setItems(prev => prev.map(i => i.id === (payload.new as any).id ? payload.new as any : i));
+        }
+      })
+      .subscribe();
 
-    return () => unsubscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
 
   const visibleItems = useMemo(
@@ -39,15 +51,12 @@ const Notifications = () => {
     const unread = items.filter(i => !i.read);
     if (!unread.length) return;
     
-    const batch = writeBatch(db);
-    unread.forEach(item => {
-      batch.update(doc(db, "notifications", item.id), { read: true });
-    });
-    await batch.commit();
+    const ids = unread.map(i => i.id);
+    await supabase.from('notifications' as any).update({ read: true } as any).in('id', ids);
   };
 
   const markRead = async (id: string) => {
-    await updateDoc(doc(db, "notifications", id), { read: true });
+    await supabase.from('notifications' as any).update({ read: true } as any).eq('id', id);
   };
 
   const getIcon = (type: string) => {
