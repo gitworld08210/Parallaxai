@@ -28,6 +28,11 @@ export const StoryProgressBar = ({
   const startTimeRef = useRef<number | null>(null);
   const pausedAtRef = useRef<number>(0);
 
+  // Keep a stable ref to the latest onComplete to avoid stale closures
+  // and prevent it from being an effect dependency (fixes issues 2 & 4)
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
   useEffect(() => {
     // Reset progress when story changes
     setProgress(0);
@@ -46,7 +51,13 @@ export const StoryProgressBar = ({
       return;
     }
 
+    // Cancelled flag prevents in-flight rAF from firing onComplete
+    // after cleanup runs (fixes issue 3: race on index change)
+    let cancelled = false;
+
     const animate = (timestamp: number) => {
+      if (cancelled) return;
+
       if (!startTimeRef.current) {
         startTimeRef.current = timestamp;
       }
@@ -58,7 +69,9 @@ export const StoryProgressBar = ({
 
       if (currentProgress >= 1) {
         setProgress(1);
-        onComplete?.();
+        if (!cancelled) {
+          onCompleteRef.current?.();
+        }
         return;
       }
 
@@ -70,12 +83,13 @@ export const StoryProgressBar = ({
     rafRef.current = requestAnimationFrame(animate);
 
     return () => {
+      cancelled = true;
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
         rafRef.current = null;
       }
     };
-  }, [currentIndex, paused, duration, onComplete]);
+  }, [currentIndex, paused, duration]);
 
   return (
     <div

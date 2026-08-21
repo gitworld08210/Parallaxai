@@ -7,7 +7,8 @@ export const ProtectedRoute = () => {
   const location = useLocation();
 
   if (loading) {
-    return <AppLoadingScreen />;
+    // Suppress the default timeout redirect while auth is still resolving
+    return <AppLoadingScreen onTimeout={() => {}} />;
   }
 
   if (!user) {
@@ -22,7 +23,7 @@ export const AdminOSGate = ({ children }: { children?: React.ReactNode }) => {
   const location = useLocation();
 
   if (loading) {
-    return <AppLoadingScreen />;
+    return <AppLoadingScreen onTimeout={() => {}} />;
   }
 
   // FIX: Check authentication FIRST before checking authorization
@@ -47,7 +48,7 @@ export const ExecutiveGate = ({ children }: { children?: React.ReactNode }) => {
   const location = useLocation();
 
   if (loading) {
-    return <AppLoadingScreen />;
+    return <AppLoadingScreen onTimeout={() => {}} />;
   }
 
   // FIX: Check authentication FIRST
