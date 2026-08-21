@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
-import { Sparkles, ArrowLeft, Mail, Lock, User, Briefcase, ChevronRight } from "lucide-react";
+import { Mail, Lock, User } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@/lib/zodResolver";
 import { loginSchema, signupSchema, type LoginFormData, type SignupFormData } from "@/lib/schemas";
@@ -21,7 +21,6 @@ const Auth = () => {
   const { user, loading } = useAuth();
   const [params] = useSearchParams();
   const { t } = useTranslation();
-  const shouldReduceMotion = useReducedMotion();
 
   const nextPath = useMemo(() => {
     const raw = params.get("next");
@@ -181,54 +180,23 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Loading Overlay */}
       {authLoading && (
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
           <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
           <p className="text-sm text-zinc-300 animate-pulse">Processing...</p>
         </div>
       )}
 
-      {/* Animated gradient orbs - hidden when user prefers reduced motion */}
-      {!shouldReduceMotion && (
-        <>
-          <motion.div
-            animate={{
-              x: [0, 30, -20, 0],
-              y: [0, -20, 15, 0],
-              scale: [1, 1.1, 0.95, 1],
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[-15%] left-[-10%] w-[55%] h-[55%] bg-primary/25 blur-[150px] rounded-full pointer-events-none"
-          />
-          <motion.div
-            animate={{
-              x: [0, -25, 20, 0],
-              y: [0, 25, -15, 0],
-              scale: [1, 0.9, 1.1, 1],
-            }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-[-15%] right-[-10%] w-[55%] h-[55%] bg-blue-500/15 blur-[150px] rounded-full pointer-events-none"
-          />
-          <motion.div
-            animate={{
-              x: [0, 15, -10, 0],
-              y: [0, -30, 20, 0],
-              scale: [1, 1.05, 0.9, 1],
-            }}
-            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-[40%] right-[20%] w-[35%] h-[35%] bg-violet-500/10 blur-[150px] rounded-full pointer-events-none"
-          />
-        </>
-      )}
+
       
       <div className="w-full max-w-[360px] flex flex-col items-center z-10">
         <div className="mb-12 text-center">
-          <span className="text-6xl font-serif italic tracking-tighter text-white drop-shadow-lg select-none" style={{ textShadow: "0 0 40px hsl(var(--primary) / 0.3)" }}>Parallax</span>
+          <span className="text-6xl font-serif italic tracking-tighter text-white select-none">Parallax</span>
         </div>
 
-        <div className="w-full border border-white/[0.06] rounded-3xl p-8 bg-card/50 backdrop-blur-sm flex flex-col">
+        <div className="w-full border border-[#333639] rounded-2xl p-8 bg-[#16181c] flex flex-col">
           <AnimatePresence mode="wait">
             <motion.div 
               key={tab}
@@ -263,7 +231,7 @@ const Auth = () => {
                       type="email" 
                       {...form.register("email")}
                       placeholder={t("auth.email")}
-                      className="w-full bg-secondary/50 border border-white/10 rounded-2xl pl-11 pr-4 h-[52px] text-sm outline-none focus:ring-2 ring-primary/30 focus:border-primary/50 transition-all placeholder:text-zinc-600"
+                      className="w-full bg-black border border-[#333639] rounded-2xl pl-11 pr-4 h-[52px] text-sm outline-none focus:ring-2 ring-[#1D9BF0]/30 focus:border-[#1D9BF0]/50 transition-all placeholder:text-zinc-600"
                     />
                   </div>
                   {form.formState.errors.email && (
@@ -277,7 +245,7 @@ const Auth = () => {
                       type="password" 
                       {...form.register("password")}
                       placeholder={t("auth.password")}
-                      className="w-full bg-secondary/50 border border-white/10 rounded-2xl pl-11 pr-4 h-[52px] text-sm outline-none focus:ring-2 ring-primary/30 focus:border-primary/50 transition-all placeholder:text-zinc-600"
+                      className="w-full bg-black border border-[#333639] rounded-2xl pl-11 pr-4 h-[52px] text-sm outline-none focus:ring-2 ring-[#1D9BF0]/30 focus:border-[#1D9BF0]/50 transition-all placeholder:text-zinc-600"
                     />
                   </div>
                   {form.formState.errors.password && (
@@ -292,7 +260,7 @@ const Auth = () => {
                         <input 
                           {...signupForm.register("name")}
                           placeholder={t("auth.full_name")}
-                          className="w-full bg-secondary/50 border border-white/10 rounded-2xl pl-11 pr-4 h-[52px] text-sm outline-none focus:ring-2 ring-primary/30 focus:border-primary/50 transition-all placeholder:text-zinc-600"
+                          className="w-full bg-black border border-[#333639] rounded-2xl pl-11 pr-4 h-[52px] text-sm outline-none focus:ring-2 ring-[#1D9BF0]/30 focus:border-[#1D9BF0]/50 transition-all placeholder:text-zinc-600"
                         />
                       </div>
                       {signupForm.formState.errors.name && (
@@ -305,7 +273,7 @@ const Auth = () => {
                         value={handle}
                         onChange={e => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9._]/g, ""))}
                         placeholder="Username (optional)"
-                        className="w-full bg-secondary/50 border border-white/10 rounded-2xl pl-11 pr-4 h-[52px] text-sm outline-none focus:ring-2 ring-primary/30 focus:border-primary/50 transition-all placeholder:text-zinc-600"
+                        className="w-full bg-black border border-[#333639] rounded-2xl pl-11 pr-4 h-[52px] text-sm outline-none focus:ring-2 ring-[#1D9BF0]/30 focus:border-[#1D9BF0]/50 transition-all placeholder:text-zinc-600"
                       />
                     </div>
                     <p className="text-[10px] text-zinc-600 px-1">
@@ -318,7 +286,7 @@ const Auth = () => {
               <button 
                 onClick={form.handleSubmit(handleAuth)}
                 disabled={busy}
-                className="w-full bg-gradient-primary text-white font-bold py-3.5 h-[52px] rounded-2xl transition-all active:scale-[0.98] disabled:opacity-50 text-sm shadow-lg shadow-primary/25 hover:shadow-glow"
+                className="w-full bg-[#1D9BF0] hover:bg-[#1A8CD8] text-white font-bold py-3.5 h-[52px] rounded-full transition-all active:scale-[0.98] disabled:opacity-50 text-sm"
               >
                 {busy ? "Signing in..." : tab === "signin" ? t("auth.sign_in") : t("auth.sign_up")}
               </button>
@@ -332,7 +300,7 @@ const Auth = () => {
               <button 
                 onClick={handleGoogle}
                 disabled={busy}
-                className="w-full flex items-center justify-center gap-3 bg-white text-black font-bold text-sm py-3.5 h-[52px] rounded-2xl border border-border shadow-sm hover:bg-zinc-100 transition-all active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-3 bg-white text-black font-bold text-sm py-3.5 h-[52px] rounded-full border border-border shadow-sm hover:bg-zinc-100 transition-all active:scale-[0.98]"
               >
                 <svg className="h-4 w-4" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -347,7 +315,7 @@ const Auth = () => {
                 <div className="text-center pt-2">
                   <button 
                     onClick={() => nav("/forgot-password")}
-                    className="text-[11px] font-bold text-zinc-500 hover:text-primary transition-colors"
+                    className="text-[11px] font-bold text-[#1D9BF0] hover:text-[#1A8CD8] transition-colors"
                   >
                     {t("auth.forgot_password")}
                   </button>
