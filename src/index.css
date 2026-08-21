@@ -2,38 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Aurelix — Clean Dark
-   Restrained, content-first, IG-grade contrast. HSL tokens only. */
+/* Parallax - X/Twitter Dark Mode + Android Material
+   Near-black backgrounds, X-blue primary, solid surfaces, no glassmorphism. */
 
 @layer base {
   :root {
-    /* ===== Rich Dark Charcoal Aesthetics ===== */
-    --background: 230 15% 5%;
+    /* ===== X Dark Mode ===== */
+    --background: 0 0% 0%;
     --foreground: 0 0% 100%;
     --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-    --surface: 230 18% 12%;
-    --surface-elevated: 230 20% 18%;
-    --surface-glass: 230 16% 9%;
+    --surface: 220 14% 10%;
+    --surface-elevated: 220 14% 14%;
+    --surface-glass: 220 14% 7%;
 
-    --card: 230 18% 10%;
+    --card: 220 14% 10%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 230 18% 12%;
+    --popover: 220 14% 10%;
     --popover-foreground: 0 0% 100%;
 
-    /* Brand — vibrant electric blue/violet */
-    --primary: 250 85% 62%;
+    /* Brand - X blue */
+    --primary: 204 88% 53%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 250 90% 72%;
+    --primary-glow: 204 88% 63%;
 
-    --secondary: 230 20% 14%;
+    --secondary: 220 14% 14%;
     --secondary-foreground: 0 0% 100%;
 
-    --accent: 320 75% 58%;
+    --accent: 204 88% 53%;
     --accent-foreground: 0 0% 100%;
 
-    --aura: 244 76% 59%;
+    --aura: 204 88% 53%;
     --aura-foreground: 0 0% 100%;
 
     --success: 152 55% 48%;
@@ -46,51 +46,52 @@
     --verified: 204 100% 55%;
     --creator: 262 83% 65%;
     --gov: 152 55% 48%;
-    --brand: 244 76% 59%;
+    --brand: 204 88% 53%;
     --founder: 42 95% 60%;
 
-    --muted: 230 20% 14%;
-    --muted-foreground: 230 12% 65%;
-    --secondary-text: 230 15% 78%;
+    --muted: 220 14% 14%;
+    --muted-foreground: 220 10% 60%;
+    --secondary-text: 220 10% 75%;
 
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 230 15% 15%;
-    --input: 230 20% 14%;
-    --ring: 250 85% 62%;
+    --border: 220 14% 16%;
+    --input: 220 14% 14%;
+    --ring: 204 88% 53%;
 
-    /* Radius scale — 8/12/16/20/24 */
-    --radius-sm: 0.5rem;   /* 8  */
-    --radius-md: 0.75rem;  /* 12 */
-    --radius-lg: 1rem;     /* 16 */
-    --radius-xl: 1.25rem;  /* 20 */
-    --radius-2xl: 1.5rem;  /* 24 */
+    /* Radius scale */
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.25rem;
+    --radius-2xl: 1.5rem;
     --radius: var(--radius-lg);
 
-    /* Gradients — vibrant violet-first */
-    --gradient-primary: linear-gradient(135deg, hsl(250 85% 62%), hsl(320 75% 58%));
+    /* Gradients - simplified for dark mode */
+    --gradient-primary: linear-gradient(135deg, hsl(204 88% 53%), hsl(204 88% 40%));
     --gradient-aura: conic-gradient(
       from 180deg at 50% 50%,
-      hsl(250 85% 62%),
-      hsl(320 75% 58%),
-      hsl(224 85% 62%),
-      hsl(250 85% 62%)
+      hsl(204 88% 53%),
+      hsl(220 80% 55%),
+      hsl(240 70% 55%),
+      hsl(204 88% 53%)
     );
     --gradient-gold: linear-gradient(135deg, hsl(42 95% 60%), hsl(28 90% 55%));
-    --gradient-infinity: radial-gradient(ellipse at top, hsl(250 60% 18% / 0.6), hsl(230 15% 5%) 60%);
-    --gradient-glass: hsl(230 18% 10%);
-    --gradient-radial-glow: radial-gradient(circle at 50% 0%, hsl(250 85% 62% / 0.16), transparent 60%);
+    --gradient-infinity: none;
+    --gradient-glass: hsl(220 14% 10%);
+    --gradient-radial-glow: none;
 
-    --shadow-xs: 0 1px 0 hsl(0 0% 100% / 0.04);
-    --shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.4);
-    --shadow-md: 0 4px 12px -2px hsl(0 0% 0% / 0.45);
-    --shadow-lg: 0 12px 32px -8px hsl(0 0% 0% / 0.55);
-    --shadow-xl: 0 24px 60px -16px hsl(0 0% 0% / 0.65);
-    --shadow-glow: 0 8px 32px -8px hsl(250 85% 62% / 0.4);
-    --shadow-aura: 0 4px 24px -6px hsl(250 85% 62% / 0.3);
-    --shadow-gold: 0 4px 24px -6px hsl(42 95% 55% / 0.3);
-    --shadow-elevated: var(--shadow-lg);
+    /* Material elevation shadows */
+    --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.3);
+    --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.4);
+    --shadow-md: 0 4px 8px hsl(0 0% 0% / 0.5);
+    --shadow-lg: 0 8px 16px hsl(0 0% 0% / 0.6);
+    --shadow-xl: 0 16px 32px hsl(0 0% 0% / 0.7);
+    --shadow-glow: 0 4px 16px -4px hsl(204 88% 53% / 0.3);
+    --shadow-aura: 0 4px 12px -4px hsl(204 88% 53% / 0.25);
+    --shadow-gold: 0 4px 12px -4px hsl(42 95% 55% / 0.25);
+    --shadow-elevated: var(--shadow-md);
     --shadow-soft: var(--shadow-xs);
 
     /* Motion */
@@ -102,37 +103,36 @@
     --duration-slow: 360ms;
     --transition-smooth: var(--duration-base) var(--ease-out-expo);
 
-    --sidebar-background: 230 18% 7%;
+    --sidebar-background: 0 0% 0%;
     --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 250 85% 62%;
+    --sidebar-primary: 204 88% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 20% 12%;
+    --sidebar-accent: 220 14% 12%;
     --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 230 20% 18%;
-    --sidebar-ring: 250 85% 62%;
+    --sidebar-border: 220 14% 16%;
+    --sidebar-ring: 204 88% 53%;
 
     /* ===== WhatsApp-style chat tokens (dark) ===== */
-    --wa-green: 158 64% 40%;              /* #128C7E-ish */
+    --wa-green: 158 64% 40%;
     --wa-green-foreground: 0 0% 100%;
     --wa-teal-dark: 170 60% 18%;
-    --chat-bg: 210 12% 8%;                /* deep chat canvas */
-    --chat-wallpaper: 210 12% 8%;
-    --chat-bubble-out: 158 58% 22%;       /* dark green outgoing */
+    --chat-bg: 0 0% 0%;
+    --chat-wallpaper: 0 0% 0%;
+    --chat-bubble-out: 158 58% 22%;
     --chat-bubble-out-foreground: 0 0% 98%;
-    --chat-bubble-in: 220 10% 14%;        /* neutral incoming */
+    --chat-bubble-in: 220 14% 14%;
     --chat-bubble-in-foreground: 0 0% 98%;
-    --chat-tick-read: 199 92% 60%;        /* blue read tick */
+    --chat-tick-read: 199 92% 60%;
     --chat-tick-muted: 0 0% 70%;
-    --chat-header: 195 32% 12%;
-    --chat-composer: 220 10% 12%;
+    --chat-header: 0 0% 0%;
+    --chat-composer: 220 14% 10%;
   }
 
   .dark {
     color-scheme: dark;
   }
 
-  /* ===== iOS Liquid-Glass Light Theme =====
-     Translucent surfaces, soft frosted blur, crisp content. */
+  /* ===== Light Theme ===== */
   .light {
     color-scheme: light;
     --background: 220 30% 97%;
@@ -148,17 +148,17 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 30% 10%;
 
-    --primary: 265 80% 58%;
+    --primary: 204 88% 53%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 265 90% 70%;
+    --primary-glow: 204 88% 63%;
 
     --secondary: 220 20% 94%;
     --secondary-foreground: 222 30% 12%;
 
-    --accent: 265 80% 58%;
+    --accent: 204 88% 53%;
     --accent-foreground: 0 0% 100%;
 
-    --aura: 265 80% 58%;
+    --aura: 204 88% 53%;
     --aura-foreground: 0 0% 100%;
 
     --success: 152 55% 42%;
@@ -168,7 +168,7 @@
     --verified: 204 100% 45%;
     --creator: 280 60% 55%;
     --gov: 142 60% 42%;
-    --brand: 28 90% 52%;
+    --brand: 204 88% 53%;
     --founder: 38 95% 50%;
 
     --muted: 220 20% 94%;
@@ -180,34 +180,34 @@
 
     --border: 220 20% 88%;
     --input: 220 20% 94%;
-    --ring: 265 80% 58%;
+    --ring: 204 88% 53%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(0 90% 55%), hsl(0 95% 65%));
+    --gradient-primary: linear-gradient(135deg, hsl(204 88% 53%), hsl(204 88% 40%));
     --gradient-aura: conic-gradient(
       from 180deg at 50% 50%,
-      hsl(0 90% 55%),
-      hsl(20 95% 60%),
-      hsl(340 85% 55%),
-      hsl(0 90% 55%)
+      hsl(204 88% 53%),
+      hsl(220 80% 55%),
+      hsl(240 70% 55%),
+      hsl(204 88% 53%)
     );
     --gradient-gold: linear-gradient(135deg, hsl(48 100% 60%), hsl(28 100% 55%));
     --gradient-infinity: radial-gradient(ellipse at top, hsl(220 60% 92% / 0.8), hsl(220 30% 97%) 60%);
     --gradient-glass: linear-gradient(135deg, hsl(0 0% 100% / 0.7), hsl(220 40% 98% / 0.55));
-    --gradient-radial-glow: radial-gradient(circle at 50% 0%, hsl(0 90% 65% / 0.1), transparent 60%);
+    --gradient-radial-glow: radial-gradient(circle at 50% 0%, hsl(204 88% 65% / 0.1), transparent 60%);
 
-    --shadow-glow: 0 8px 32px -8px hsl(0 90% 50% / 0.25);
-    --shadow-aura: 0 4px 24px -6px hsl(0 90% 50% / 0.18);
-    --shadow-gold: 0 4px 24px -6px hsl(48 100% 55% / 0.25);
-    --shadow-elevated: 0 10px 30px -12px hsl(220 40% 30% / 0.18);
+    --shadow-glow: 0 4px 16px -4px hsl(204 88% 50% / 0.25);
+    --shadow-aura: 0 4px 12px -4px hsl(204 88% 50% / 0.18);
+    --shadow-gold: 0 4px 12px -4px hsl(48 100% 55% / 0.25);
+    --shadow-elevated: 0 4px 12px -4px hsl(220 40% 30% / 0.15);
     --shadow-soft: 0 1px 0 hsl(220 30% 20% / 0.04);
 
     /* WhatsApp-style chat tokens (light) */
     --wa-green: 158 64% 40%;
     --wa-green-foreground: 0 0% 100%;
     --wa-teal-dark: 170 60% 20%;
-    --chat-bg: 44 25% 92%;                /* WA cream */
+    --chat-bg: 44 25% 92%;
     --chat-wallpaper: 44 25% 92%;
-    --chat-bubble-out: 92 55% 82%;        /* WA light green out */
+    --chat-bubble-out: 92 55% 82%;
     --chat-bubble-out-foreground: 210 20% 12%;
     --chat-bubble-in: 0 0% 100%;
     --chat-bubble-in-foreground: 210 20% 12%;
@@ -219,163 +219,35 @@
 
   .light body {
     background-image:
-      radial-gradient(60rem 40rem at 10% -10%, hsl(0 90% 70% / 0.1), transparent 60%),
-      radial-gradient(50rem 36rem at 110% 10%, hsl(220 90% 70% / 0.12), transparent 60%),
-      radial-gradient(40rem 30rem at 50% 110%, hsl(280 80% 75% / 0.1), transparent 60%),
       linear-gradient(180deg, hsl(220 40% 98%), hsl(220 25% 95%));
     background-attachment: fixed;
   }
-
-  /* Liquid-glass surfaces only in light mode */
-  .light .glass {
-    background: linear-gradient(135deg, hsl(0 0% 100% / 0.55), hsl(220 40% 98% / 0.35));
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid hsl(0 0% 100% / 0.6);
-    box-shadow:
-      inset 0 1px 0 hsl(0 0% 100% / 0.8),
-      inset 0 -1px 0 hsl(220 30% 70% / 0.18),
-      0 8px 32px -10px hsl(220 40% 20% / 0.12);
-  }
-
-  .light .glass-strong {
-    background: linear-gradient(135deg, hsl(0 0% 100% / 0.72), hsl(220 30% 96% / 0.55));
-    backdrop-filter: blur(36px) saturate(200%);
-    -webkit-backdrop-filter: blur(36px) saturate(200%);
-    border: 1px solid hsl(0 0% 100% / 0.75);
-    box-shadow:
-      inset 0 1px 0 hsl(0 0% 100% / 0.9),
-      inset 0 -1px 0 hsl(220 30% 70% / 0.22),
-      0 16px 48px -18px hsl(220 40% 20% / 0.18);
-  }
-
-  /* Make sticky/translucent app chrome read as frosted in light */
-  .light header.sticky,
-  .light nav.sticky,
-  .light nav.fixed,
-  .light [class*="backdrop-blur"] {
-    backdrop-filter: blur(28px) saturate(180%);
-    -webkit-backdrop-filter: blur(28px) saturate(180%);
-  }
 }
 
-/* ===== iOS 26 Liquid Glass utilities ===== */
+/* Glass classes - rendered as plain solid surfaces (no blur/glassmorphism) */
 @layer components {
   .liquid-glass,
   .liquid-nav {
-    position: relative;
-    isolation: isolate;
-    background-clip: padding-box;
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    border-radius: 1rem;
   }
 
-  /* Base (dark theme keeps a subtle version) */
-  .liquid-glass {
-    background: linear-gradient(135deg, hsl(0 0% 100% / 0.14), hsl(0 0% 100% / 0.05));
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid hsl(0 0% 100% / 0.18);
-    box-shadow:
-      0 8px 32px hsl(0 0% 0% / 0.10),
-      inset 0 1px 0 hsl(0 0% 100% / 0.24);
-    border-radius: 1.5rem;
-  }
-
-  /* --- LIGHT MODE: true iOS liquid glass --- */
-  .light .liquid-glass,
-  .light .liquid-nav {
-    background:
-      radial-gradient(120% 80% at 20% 0%, hsl(0 0% 100% / 0.55), transparent 60%),
-      radial-gradient(140% 90% at 100% 100%, hsl(220 100% 96% / 0.35), transparent 55%),
-      linear-gradient(180deg, hsl(0 0% 100% / 0.42), hsl(0 0% 100% / 0.22));
-    backdrop-filter: blur(40px) saturate(200%) brightness(1.08);
-    -webkit-backdrop-filter: blur(40px) saturate(200%) brightness(1.08);
-    border: 1px solid hsl(0 0% 100% / 0.55);
-    box-shadow:
-      /* soft outer drop */
-      0 12px 40px -12px hsl(220 40% 20% / 0.18),
-      0 2px 8px -2px hsl(220 40% 20% / 0.10),
-      /* top inner highlight (specular) */
-      inset 0 1px 0 hsl(0 0% 100% / 0.95),
-      inset 0 2px 6px hsl(0 0% 100% / 0.35),
-      /* bottom inner shade (glass thickness) */
-      inset 0 -1px 0 hsl(220 30% 60% / 0.20),
-      inset 0 -8px 24px hsl(220 40% 70% / 0.10);
-  }
-
-  /* Iridescent sheen sweep (top layer) */
+  /* No pseudo-elements for glass effects */
   .liquid-glass::before,
-  .liquid-nav::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: linear-gradient(
-      120deg,
-      transparent 0%,
-      hsl(0 0% 100% / 0.10) 18%,
-      hsl(0 0% 100% / 0.55) 30%,
-      hsl(0 0% 100% / 0.08) 42%,
-      transparent 70%
-    );
-    mix-blend-mode: overlay;
-    pointer-events: none;
-    z-index: 1;
-    opacity: 0;
-    transition: opacity 400ms ease;
-  }
-  .light .liquid-glass::before,
-  .light .liquid-nav::before { opacity: 1; }
-
-  /* Chromatic edge shimmer (bottom layer) */
+  .liquid-nav::before,
   .liquid-glass::after,
   .liquid-nav::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      135deg,
-      hsl(0 0% 100% / 0.9) 0%,
-      hsl(210 100% 90% / 0.5) 25%,
-      hsl(280 60% 92% / 0.35) 50%,
-      hsl(180 60% 92% / 0.4) 75%,
-      hsl(0 0% 100% / 0.7) 100%
-    );
-    -webkit-mask:
-      linear-gradient(#000 0 0) content-box,
-      linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-            mask-composite: exclude;
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 400ms ease;
+    display: none;
   }
-  .light .liquid-glass::after,
-  .light .liquid-nav::after { opacity: 0.9; }
-
-  /* Navigation variant — sits on top/bottom edges */
-  .liquid-nav {
-    background: linear-gradient(180deg, hsl(0 0% 100% / 0.10), hsl(0 0% 100% / 0.04));
-    backdrop-filter: blur(32px) saturate(180%);
-    -webkit-backdrop-filter: blur(32px) saturate(180%);
-    border: 1px solid hsl(0 0% 100% / 0.14);
-    box-shadow:
-      0 18px 50px -20px hsl(0 0% 0% / 0.55),
-      inset 0 1px 0 hsl(0 0% 100% / 0.16);
-  }
-
-
-
 
   .liquid-hover {
     transition:
-      transform 240ms var(--ease-out-expo),
-      box-shadow 240ms var(--ease-out-expo),
-      background-color 240ms;
+      transform 150ms var(--ease-standard),
+      background-color 150ms;
   }
   .liquid-hover:hover {
-    transform: translateY(-2px);
+    background: hsl(var(--secondary));
   }
 
   html,
@@ -405,7 +277,7 @@
 }
 
 @layer components {
-  /* "glass" classes kept for backward compatibility but rendered as flat surfaces */
+  /* Glass classes kept for backward compatibility - solid surfaces only */
   .glass {
     background: hsl(var(--card));
     backdrop-filter: none;
@@ -450,6 +322,11 @@
   .no-scrollbar {
     scrollbar-width: none;
   }
+
+  /* Instagram story ring gradient */
+  .story-ring-gradient {
+    background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #833ab4, #5851db);
+  }
 }
 
 @layer utilities {
@@ -460,10 +337,10 @@
     background: var(--gradient-gold);
   }
   .bg-gradient-infinity {
-    background: var(--gradient-infinity);
+    background: hsl(var(--background));
   }
   .bg-radial-glow {
-    background: var(--gradient-radial-glow);
+    background: hsl(var(--background));
   }
   .shadow-glow {
     box-shadow: var(--shadow-glow);
@@ -489,28 +366,16 @@
     animation: shimmer 2s linear infinite;
   }
 
+  /* Android-style press feedback (no iOS bounce) */
   .press-scale {
-    transition: transform 150ms ease;
+    transition: transform 100ms ease, opacity 100ms ease;
   }
   .press-scale:active {
-    transform: scale(0.97);
+    transform: scale(0.98);
+    opacity: 0.85;
   }
 }
 
-@keyframes aura-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-@keyframes float-soft {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-4px);
-  }
-}
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -519,6 +384,7 @@
     background-position: 200% 0;
   }
 }
+
 @keyframes founder-pulse {
   0%,
   100% {
@@ -531,7 +397,7 @@
   }
 }
 
-/* Aurum — founder-only theme. Obsidian + warm gold. */
+/* Aurum - founder-only theme. Obsidian + warm gold. */
 .theme-aurum {
   --background: 30 12% 4%;
   --foreground: 45 30% 96%;
@@ -581,16 +447,12 @@
 }
 
 .wallet-os-header {
-  background: hsl(var(--wallet-ink) / 0.72);
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  background: hsl(var(--wallet-ink) / 0.92);
   border-bottom: 1px solid hsl(0 0% 100% / 0.06);
 }
 
 .wallet-os-tabbar {
-  background: hsl(var(--wallet-ink) / 0.78);
-  backdrop-filter: blur(24px) saturate(170%);
-  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  background: hsl(var(--wallet-ink) / 0.92);
   border-top: 1px solid hsl(0 0% 100% / 0.07);
 }
 
@@ -635,8 +497,6 @@
   border-radius: 16px;
   background: hsl(0 0% 100% / 0.045);
   border: 1px solid hsl(0 0% 100% / 0.08);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
 }
 
 .wallet-os-action {

@@ -1,0 +1,39 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Complete Android-native UI overhaul: retheme colors to X dark mode, redesign Feed/PostCard/MobileNav/StoriesRail like X (Twitter), redesign Reels like Instagram Reels, redesign Profile like X profile, replace iOS glassmorphism with Material-like solid surfaces and elevation.",
+  "status": "in_progress",
+  "steps": [
+    "STEP 1 - Retheme src/index.css for X dark mode: Change --background to near-black (0 0% 0% or 210 20% 7%), --card to dark surface (#16181C / 220 14% 10%), remove all glassmorphism/liquid-glass references from the dark theme (keep for light if desired), replace violet primary with X-blue (204 88% 53% / #1D9BF0), remove --gradient-glass, --gradient-infinity, --gradient-radial-glow from dark, simplify shadows to Material elevation (no glow shadows). Replace press-scale iOS bounce with a subtle ripple-like feedback class. Remove the .liquid-glass, .liquid-nav classes entirely (or make them no-ops in dark). Keep .light theme as-is (users can switch).",
+    "STEP 2 - Redesign src/components/layout/MobileNav.tsx to match X bottom nav: Use 5 items: Home, Search, Grok-equivalent (use Sparkles icon for 'Spaces'), Notifications (Heart/Bell), Messages (Mail). Remove the gradient circle create button (X uses a floating FAB instead). Make the nav bar solid background with top border (no blur/glass). Remove the animated dot indicator, use filled vs outlined icons for active state (like X). Icons should be 26px, no labels visible.",
+    "STEP 3 - Redesign src/pages/Feed.tsx top header to match X: Left side shows user avatar (tap opens side menu - already exists). Center shows 'Parallax' brand logo (smaller, not italic serif). Right side shows a settings/star icon (or keep notification bell). The For You / Following tabs should be full-width with thin underline indicator (not thick gradient). Remove the DM paper plane icon from header (DMs are in bottom nav now). Keep the floating compose FAB (blue circle with feather/plus icon at bottom-right, above nav).",
+    "STEP 4 - Redesign src/components/social/PostCard.tsx to match X tweet card: Remove the bg-card background and border-b hover effect. Posts should be separated by a thin 1px divider only (divide-y on parent). Avatar 40px circle on left, content on right. Header line: Name (bold) + verified badge + @handle (gray) + dot + time (gray) all in one line. No card wrapper. Action bar should be: reply (with count), repost, like (with count), bookmark, share. Remove 'Send Aura/Tip' button from the main action row. Keep the three-dot menu. Media should have rounded corners (16px) with 1px border.",
+    "STEP 5 - Redesign src/components/social/StoriesRail.tsx to match Instagram stories: Circle avatars 64px with gradient ring (Instagram's rainbow gradient: orange-pink-purple). 'Your story' first with + badge. Username below in 11px. Horizontal scroll. No visible border on the rail section, just padding separation from feed content above.",
+    "STEP 6 - Redesign src/pages/Reels.tsx to match Instagram Reels exactly: Full-screen vertical snap scroll (already close). Action buttons on right: heart, comment, share, bookmark, three-dot menu - vertically stacked with counts. Bottom-left: username (bold, white), caption (max 2 lines, tap to expand), audio track with spinning album art. Top: 'Reels' text center, camera icon top-right. Remove the For You/Following tabs from Reels (Instagram doesn't have them on Reels). Progress bar at very bottom.",
+    "STEP 7 - Redesign src/pages/Profile.tsx to match X profile: Back arrow top-left with name + post count below. Cover image full-width. Avatar overlaps cover (offset by -48px from cover bottom). Below avatar: Name + verified + @handle on separate line + bio + location/link/calendar joined. Stats: Following (count) Followers (count) in one line with clickable numbers. Tab bar: Posts | Replies | Media | Likes with underline indicator. Remove the glass/blur from header, make it solid background.",
+    "STEP 8 - Update src/components/layout/AppShell.tsx: Ensure clean full-black background, no blur effects. The main content area should have no extra padding or borders. Status bar area should be handled by safe-area-inset-top.",
+    "STEP 9 - Update src/components/layout/AppLoadingScreen.tsx: Remove the animated gradient orbs (too iOS-like). Make it a simple centered logo on black background with a minimal loading indicator (thin progress bar or simple spinner).",
+    "STEP 10 - Clean up remaining CSS in src/index.css: Remove or neutralize all .liquid-glass, .liquid-nav, .glass, .glass-strong classes (make them render as plain solid surfaces). Remove iOS-specific animations (float-soft, aura-spin). Keep the wallet-os styles as they are separate. Ensure the dark theme is the default and looks like X/Twitter dark mode."
+  ],
+  "acceptance_criteria": [
+    "Dark theme background is near-black (#000000 or very dark), matching X dark mode",
+    "Primary accent color is X-blue (#1D9BF0) not violet",
+    "No glassmorphism/blur effects in dark mode - all surfaces are solid with elevation",
+    "MobileNav has 5 items matching X pattern (Home, Search, Spaces, Notifications, Messages) with filled/outline active states",
+    "Feed header shows avatar left, brand center, with clean For You/Following tabs",
+    "PostCard renders as X-style tweet with no card wrapper, just divider lines",
+    "StoriesRail shows Instagram-style gradient ring circles",
+    "Reels page is full-screen Instagram-style with right action rail and bottom-left captions",
+    "Profile page matches X layout: cover -> overlapping avatar -> name/handle/bio -> stats -> tabbed content",
+    "Loading screen is minimal without iOS animated orbs",
+    "bunx tsc --noEmit passes with 0 errors",
+    "bun run build succeeds"
+  ],
+  "verification": [
+    "bunx tsc --noEmit exits 0",
+    "bun run build exits 0",
+    "bun run test -- --run shows no new test failures"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
