@@ -25,13 +25,6 @@ export const MobileNav = ({ unreadNotif = 0, unreadDm = 0 }: Props) => {
     { to: "/profile", icon: User, label: "Profile" },
   ];
 
-  // Determine active item for layoutId indicator
-  const activeItem = items.find((item) => {
-    if (item.action) return false;
-    if (item.end) return loc.pathname === item.to;
-    return loc.pathname.startsWith(item.to);
-  });
-
   return (
     <>
       <nav

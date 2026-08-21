@@ -694,23 +694,23 @@ const Profile = () => {
           )}
 
           {/* Stats row - larger numbers with visual hierarchy and dividers */}
-          <div className="flex items-center gap-0 pt-2">
-            <Link to={`/u/${profile.username}/followers`} className="hover:underline pr-5">
+          <div className="flex items-center gap-0 pt-2 overflow-x-auto no-scrollbar">
+            <Link to={`/u/${profile.username}/followers`} className="hover:underline pr-5 min-w-0 shrink-0">
               <span className="text-lg font-bold text-foreground block leading-tight">{fmt(profile.followers_count ?? 0)}</span>
               <span className="text-xs text-muted-foreground">Followers</span>
             </Link>
-            <div className="h-8 w-px bg-border" />
-            <Link to={`/u/${profile.username}/following`} className="hover:underline px-5">
+            <div className="h-8 w-px bg-border shrink-0" />
+            <Link to={`/u/${profile.username}/following`} className="hover:underline px-5 min-w-0 shrink-0">
               <span className="text-lg font-bold text-foreground block leading-tight">{fmt(profile.following_count ?? 0)}</span>
               <span className="text-xs text-muted-foreground">Following</span>
             </Link>
-            <div className="h-8 w-px bg-border" />
-            <button onClick={() => setTab("posts")} className="hover:underline px-5">
+            <div className="h-8 w-px bg-border shrink-0" />
+            <button onClick={() => setTab("posts")} className="hover:underline px-5 min-w-0 shrink-0">
               <span className="text-lg font-bold text-foreground block leading-tight">{fmt(profile.posts_count ?? 0)}</span>
               <span className="text-xs text-muted-foreground">Posts</span>
             </button>
-            <div className="h-8 w-px bg-border" />
-            <button onClick={() => setTab("organizations")} className="hover:underline pl-5">
+            <div className="h-8 w-px bg-border shrink-0" />
+            <button onClick={() => setTab("organizations")} className="hover:underline pl-5 min-w-0 shrink-0">
               <span className="text-lg font-bold text-foreground block leading-tight">{fmt(memberships.length)}</span>
               <span className="text-xs text-muted-foreground">Orgs</span>
             </button>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
@@ -21,6 +21,7 @@ const Auth = () => {
   const { user, loading } = useAuth();
   const [params] = useSearchParams();
   const { t } = useTranslation();
+  const shouldReduceMotion = useReducedMotion();
 
   const nextPath = useMemo(() => {
     const raw = params.get("next");
@@ -189,34 +190,38 @@ const Auth = () => {
         </div>
       )}
 
-      {/* Animated gradient orbs */}
-      <motion.div
-        animate={{
-          x: [0, 30, -20, 0],
-          y: [0, -20, 15, 0],
-          scale: [1, 1.1, 0.95, 1],
-        }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-[-15%] left-[-10%] w-[55%] h-[55%] bg-primary/25 blur-[150px] rounded-full pointer-events-none"
-      />
-      <motion.div
-        animate={{
-          x: [0, -25, 20, 0],
-          y: [0, 25, -15, 0],
-          scale: [1, 0.9, 1.1, 1],
-        }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute bottom-[-15%] right-[-10%] w-[55%] h-[55%] bg-blue-500/15 blur-[150px] rounded-full pointer-events-none"
-      />
-      <motion.div
-        animate={{
-          x: [0, 15, -10, 0],
-          y: [0, -30, 20, 0],
-          scale: [1, 1.05, 0.9, 1],
-        }}
-        transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute top-[40%] right-[20%] w-[35%] h-[35%] bg-violet-500/10 blur-[150px] rounded-full pointer-events-none"
-      />
+      {/* Animated gradient orbs - hidden when user prefers reduced motion */}
+      {!shouldReduceMotion && (
+        <>
+          <motion.div
+            animate={{
+              x: [0, 30, -20, 0],
+              y: [0, -20, 15, 0],
+              scale: [1, 1.1, 0.95, 1],
+            }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[-15%] left-[-10%] w-[55%] h-[55%] bg-primary/25 blur-[150px] rounded-full pointer-events-none"
+          />
+          <motion.div
+            animate={{
+              x: [0, -25, 20, 0],
+              y: [0, 25, -15, 0],
+              scale: [1, 0.9, 1.1, 1],
+            }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-[-15%] right-[-10%] w-[55%] h-[55%] bg-blue-500/15 blur-[150px] rounded-full pointer-events-none"
+          />
+          <motion.div
+            animate={{
+              x: [0, 15, -10, 0],
+              y: [0, -30, 20, 0],
+              scale: [1, 1.05, 0.9, 1],
+            }}
+            transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-[40%] right-[20%] w-[35%] h-[35%] bg-violet-500/10 blur-[150px] rounded-full pointer-events-none"
+          />
+        </>
+      )}
       
       <div className="w-full max-w-[360px] flex flex-col items-center z-10">
         <div className="mb-12 text-center">

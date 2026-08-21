@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 interface AppLoadingScreenProps {
   /** Called when the timeout expires. If not provided, navigates to /auth. */
@@ -15,6 +15,7 @@ export const AppLoadingScreen = ({
 }: AppLoadingScreenProps) => {
   const navigate = useNavigate();
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     timerRef.current = setTimeout(() => {
@@ -37,33 +38,37 @@ export const AppLoadingScreen = ({
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
-      {/* Animated gradient orbs */}
-      <motion.div
-        className="absolute top-1/4 -left-20 h-72 w-72 rounded-full bg-primary/20 blur-[100px]"
-        animate={{
-          x: [0, 40, 0],
-          y: [0, -30, 0],
-          scale: [1, 1.2, 1],
-        }}
-        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute bottom-1/4 -right-20 h-64 w-64 rounded-full bg-primary/15 blur-[80px]"
-        animate={{
-          x: [0, -30, 0],
-          y: [0, 20, 0],
-          scale: [1.1, 0.9, 1.1],
-        }}
-        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-      />
-      <motion.div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-48 w-48 rounded-full bg-primary/10 blur-[60px]"
-        animate={{
-          scale: [0.8, 1.3, 0.8],
-          opacity: [0.3, 0.6, 0.3],
-        }}
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-      />
+      {/* Animated gradient orbs - hidden when user prefers reduced motion */}
+      {!shouldReduceMotion && (
+        <>
+          <motion.div
+            className="absolute top-1/4 -left-20 h-72 w-72 rounded-full bg-primary/20 blur-[100px]"
+            animate={{
+              x: [0, 40, 0],
+              y: [0, -30, 0],
+              scale: [1, 1.2, 1],
+            }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute bottom-1/4 -right-20 h-64 w-64 rounded-full bg-primary/15 blur-[80px]"
+            animate={{
+              x: [0, -30, 0],
+              y: [0, 20, 0],
+              scale: [1.1, 0.9, 1.1],
+            }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-48 w-48 rounded-full bg-primary/10 blur-[60px]"
+            animate={{
+              scale: [0.8, 1.3, 0.8],
+              opacity: [0.3, 0.6, 0.3],
+            }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </>
+      )}
 
       <div className="flex flex-col items-center gap-8 z-10">
         {/* Animated brand text */}
