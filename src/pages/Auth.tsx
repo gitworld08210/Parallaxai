@@ -183,7 +183,7 @@ const Auth = () => {
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Loading Overlay */}
       {authLoading && (
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-50 flex flex-col items-center justify-center">
+        <div className="absolute inset-0 bg-black/90 z-50 flex flex-col items-center justify-center">
           <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4" />
           <p className="text-sm text-zinc-300 animate-pulse">Processing...</p>
         </div>

@@ -12,22 +12,28 @@
     --foreground: 0 0% 100%;
     --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
-    --surface: 220 14% 10%;
-    --surface-elevated: 220 14% 14%;
-    --surface-glass: 220 14% 7%;
+    /* Surfaces - X #16181C card, #202327 hover/input */
+    --surface: 220 12% 10%;
+    --surface-elevated: 214 10% 14%;
+    --surface-glass: 220 12% 10%;
 
-    --card: 220 14% 10%;
+    --card: 220 12% 10%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 220 14% 10%;
+    --popover: 220 12% 10%;
     --popover-foreground: 0 0% 100%;
 
-    /* Brand - X blue */
+    /* Brand - X blue #1D9BF0, hover #1A8CD8 */
     --primary: 204 88% 53%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 204 79% 47%;
     --primary-glow: 204 88% 63%;
 
-    --secondary: 220 14% 14%;
+    /* X engagement colors */
+    --like: 332 95% 54%;
+    --repost: 160 100% 37%;
+
+    --secondary: 214 10% 14%;
     --secondary-foreground: 0 0% 100%;
 
     --accent: 204 88% 53%;
@@ -49,15 +55,17 @@
     --brand: 204 88% 53%;
     --founder: 42 95% 60%;
 
-    --muted: 220 14% 14%;
-    --muted-foreground: 220 10% 60%;
-    --secondary-text: 220 10% 75%;
+    --muted: 214 10% 14%;
+    /* X secondary text #71767B */
+    --muted-foreground: 210 4% 46%;
+    --secondary-text: 210 4% 46%;
 
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 14% 16%;
-    --input: 220 14% 14%;
+    /* X divider #2F3336 */
+    --border: 206 7% 20%;
+    --input: 214 10% 14%;
     --ring: 204 88% 53%;
 
     /* Radius scale */
@@ -79,7 +87,7 @@
     );
     --gradient-gold: linear-gradient(135deg, hsl(42 95% 60%), hsl(28 90% 55%));
     --gradient-infinity: none;
-    --gradient-glass: hsl(220 14% 10%);
+    --gradient-glass: hsl(220 12% 10%);
     --gradient-radial-glow: none;
 
     /* Material elevation shadows */
@@ -107,9 +115,9 @@
     --sidebar-foreground: 0 0% 96%;
     --sidebar-primary: 204 88% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 12%;
+    --sidebar-accent: 214 10% 14%;
     --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 220 14% 16%;
+    --sidebar-border: 206 7% 20%;
     --sidebar-ring: 204 88% 53%;
 
     /* ===== WhatsApp-style chat tokens (dark) ===== */
@@ -120,12 +128,12 @@
     --chat-wallpaper: 0 0% 0%;
     --chat-bubble-out: 158 58% 22%;
     --chat-bubble-out-foreground: 0 0% 98%;
-    --chat-bubble-in: 220 14% 14%;
+    --chat-bubble-in: 214 10% 14%;
     --chat-bubble-in-foreground: 0 0% 98%;
     --chat-tick-read: 199 92% 60%;
     --chat-tick-muted: 0 0% 70%;
     --chat-header: 0 0% 0%;
-    --chat-composer: 220 14% 10%;
+    --chat-composer: 220 12% 10%;
   }
 
   .dark {
@@ -150,7 +158,11 @@
 
     --primary: 204 88% 53%;
     --primary-foreground: 0 0% 100%;
+    --primary-hover: 204 79% 47%;
     --primary-glow: 204 88% 63%;
+
+    --like: 332 95% 54%;
+    --repost: 160 100% 37%;
 
     --secondary: 220 20% 94%;
     --secondary-foreground: 222 30% 12%;

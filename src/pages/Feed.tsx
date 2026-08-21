@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
-import { Sparkles, Users, PenSquare, Settings } from "lucide-react";
+import { Sparkles, Users, Feather, Settings } from "lucide-react";
 import { motion } from "framer-motion";
 import { PostCard, FeedPost } from "@/components/social/PostCard";
 import { CommentSheet } from "@/components/social/CommentSheet";
@@ -157,7 +157,7 @@ const Feed = () => {
                 aria-selected={active}
                 onClick={() => setTab(item.id)}
                 className={cn(
-                  "relative h-12 text-[15px] font-semibold transition-colors hover:bg-secondary/40",
+                  "relative h-[53px] text-[15px] font-semibold transition-colors hover:bg-secondary/40",
                   active ? "text-foreground" : "text-muted-foreground",
                 )}
               >
@@ -166,7 +166,7 @@ const Feed = () => {
                   {active && (
                     <motion.span
                       layoutId="feed-tab-underline"
-                      className="absolute -bottom-px left-0 right-0 h-[3px] rounded-full bg-primary"
+                      className="absolute -bottom-px left-0 right-0 h-1 rounded-full bg-primary"
                       transition={{ type: "spring", stiffness: 500, damping: 40 }}
                     />
                   )}
@@ -220,7 +220,7 @@ const Feed = () => {
         <div ref={sentinelRef} className="h-1" />
         {loading && posts.length > 0 && <LoadingSpinner />}
         {!hasMore && posts.length > 0 && (
-          <p className="text-center text-xs text-muted-foreground py-6">You're all caught up</p>
+          <p className="text-center text-[15px] text-muted-foreground py-6">You're all caught up</p>
         )}
       </section>
 
@@ -228,9 +228,9 @@ const Feed = () => {
       <Link
         to="/compose"
         aria-label="Compose"
-        className="fixed z-40 bottom-24 right-4 h-14 w-14 rounded-full bg-primary text-primary-foreground grid place-items-center shadow-elevated active:scale-95 transition-transform"
+        className="fixed z-40 bottom-24 right-4 h-14 w-14 rounded-full bg-primary hover:bg-primary-hover text-primary-foreground grid place-items-center shadow-elevated active:scale-95 transition-colors"
       >
-        <PenSquare className="h-6 w-6" strokeWidth={2.2} />
+        <Feather className="h-6 w-6" strokeWidth={2} />
       </Link>
 
       <CommentSheet postId={commentPost} open={!!commentPost} onOpenChange={(b) => !b && setCommentPost(null)} />

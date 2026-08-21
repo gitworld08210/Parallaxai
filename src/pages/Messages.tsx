@@ -2,8 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Search, SquarePen, X, MessageCircle, Archive, Users, Pin, Check, CheckCheck, Camera, Phone } from "lucide-react";
-import { motion } from "framer-motion";
+import { Search, X as XIcon, MessageCircle, Users, Settings, Mail } from "lucide-react";
 import { AuraAvatar } from "@/components/vibe/AuraAvatar";
 import { VerificationBadge } from "@/components/vibe/VerificationBadge";
 import { EmptyState } from "@/components/empty/EmptyState";
@@ -14,8 +13,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { NewGroupSheet } from "@/components/dm/NewGroupSheet";
 
-const RED = "hsl(var(--wa-green))"; // WhatsApp green accent
-
+/** X shows a bare time for today, weekday within the week, then a short date. */
 const chatTime = (iso: string) => {
   const d = new Date(iso);
   const now = new Date();
@@ -23,7 +21,8 @@ const chatTime = (iso: string) => {
   if (sameDay) return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   const diffDays = Math.floor((now.getTime() - d.getTime()) / 86_400_000);
   if (diffDays < 7) return d.toLocaleDateString([], { weekday: "short" });
-  return d.toLocaleDateString([], { day: "2-digit", month: "2-digit" });
+  if (d.getFullYear() === now.getFullYear()) return d.toLocaleDateString([], { day: "numeric", month: "short" });
+  return d.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
 };
 
 type Conv = {
@@ -66,7 +65,7 @@ const Messages = () => {
   const load = async () => {
     if (!user) return;
     setLoading(true);
-    
+
     const { data } = await supabase
       .from('conversations')
       .select('*')
@@ -150,7 +149,6 @@ const Messages = () => {
     });
   }, [convs, query, tab]);
 
-  const recents = useMemo(() => convs.slice(0, 8), [convs]);
   const unreadCount = useMemo(() => convs.filter((c) => c.unread > 0).length, [convs]);
   const groupsCount = useMemo(() => convs.filter((c) => c.is_group).length, [convs]);
   const requestsCount = useMemo(() => convs.filter((c) => !c.last).length, [convs]);
@@ -167,7 +165,7 @@ const Messages = () => {
         .contains('member_ids', [user.id]);
 
       const existing = (existingConvs as any[] || []).find((c: any) => c.member_ids?.includes(otherId));
-      
+
       if (existing) {
         setComposerOpen(false);
         setComposerQuery("");
@@ -184,7 +182,7 @@ const Messages = () => {
         members: []
       } as any).select().single();
       if (error) throw error;
-      
+
       setComposerOpen(false);
       setComposerQuery("");
       nav(`/messages/${(newConv as any).id}`);
@@ -201,293 +199,213 @@ const Messages = () => {
   ];
 
   return (
-    <div style={{ background: "hsl(var(--background))", color: "hsl(var(--foreground))" }} className="min-h-screen">
-      {/* Sticky Telegram-style header */}
-      <header
-        className="sticky top-0 z-20 px-5 pt-4 pb-3 backdrop-blur-xl"
-        style={{ background: "hsl(var(--background) / 0.85)", borderBottom: "1px solid hsl(var(--border))" }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-[26px] font-bold tracking-tight text-foreground">Chats</h1>
-          <div className="flex items-center gap-1.5">
+    <div className="min-h-screen pb-24">
+      {/* X DM header - solid black, title + actions, then search pill */}
+      <div className="sticky top-0 z-30 bg-background border-b border-border">
+        <header className="h-[53px] px-4 flex items-center justify-between">
+          <h1 className="text-[20px] font-bold tracking-tight">Messages</h1>
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setGroupOpen(true)}
-              className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted/40"
+              className="h-9 w-9 grid place-items-center rounded-full hover:bg-secondary transition-colors"
               aria-label="New group"
             >
-              <Users className="h-[19px] w-[19px] text-foreground/80" />
+              <Users className="h-5 w-5" />
             </button>
-            <button
-              onClick={() => setComposerOpen(true)}
-              className="h-9 w-9 grid place-items-center rounded-full transition-transform active:scale-95"
-              style={{ background: RED, boxShadow: "0 8px 24px hsl(var(--wa-green) / 0.4)" }}
-              aria-label="New chat"
+            <Link
+              to="/settings"
+              className="h-9 w-9 grid place-items-center rounded-full hover:bg-secondary transition-colors"
+              aria-label="Message settings"
             >
-              <SquarePen className="h-[17px] w-[17px] text-foreground" strokeWidth={2.25} />
-            </button>
+              <Settings className="h-5 w-5" />
+            </Link>
+          </div>
+        </header>
+
+        {/* Search pill */}
+        <div className="px-4 pb-2">
+          <div className="h-9 rounded-full bg-secondary flex items-center gap-3 px-4 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary transition-colors">
+            <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search Direct Messages"
+              aria-label="Search Direct Messages"
+              className="flex-1 min-w-0 bg-transparent outline-none text-[15px] placeholder:text-muted-foreground"
+            />
+            {query && (
+              <button onClick={() => setQuery("")} aria-label="Clear search" className="shrink-0">
+                <span className="grid place-items-center h-[18px] w-[18px] rounded-full bg-primary">
+                  <XIcon className="h-3 w-3 text-primary-foreground" strokeWidth={3} />
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Search pill */}
-        <div
-          className="flex items-center gap-2 rounded-2xl px-3.5 py-2.5"
-          style={{ background: "hsl(var(--secondary))", border: "1px solid hsl(var(--border))" }}
-        >
-          <Search className="h-4 w-4 text-muted-foreground" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search chats and messages"
-            className="flex-1 bg-transparent outline-none text-[14px] text-foreground placeholder:text-muted-foreground"
-          />
-          {query && (
-            <button onClick={() => setQuery("")} aria-label="Clear">
-              <X className="h-4 w-4 text-muted-foreground" />
-            </button>
-          )}
-        </div>
-
-        {/* Filter chips */}
-        <div className="flex items-center gap-2 mt-3 -mx-1 overflow-x-auto scrollbar-hide">
+        {/* Inbox filters as X underline tabs */}
+        <div role="tablist" className="flex">
           {tabs.map((t) => {
             const active = tab === t.id;
             return (
               <button
                 key={t.id}
+                role="tab"
+                aria-selected={active}
                 onClick={() => setTab(t.id)}
                 className={cn(
-                  "shrink-0 px-3.5 h-8 rounded-full text-[12.5px] font-semibold inline-flex items-center gap-1.5 transition-all",
-                  active ? "text-foreground" : "text-muted-foreground"
+                  "relative flex-1 h-[46px] text-[15px] font-semibold transition-colors hover:bg-secondary/40",
+                  active ? "text-foreground" : "text-muted-foreground",
                 )}
-                style={{
-                  background: active ? RED : "hsl(var(--secondary))",
-                  border: active ? `1px solid ${RED}` : "1px solid hsl(var(--border))",
-                }}
               >
-                {t.label}
-                {t.count > 0 && (
-                  <span
-                    className="min-w-[18px] h-[18px] px-1 rounded-full grid place-items-center text-[10px] font-bold"
-                    style={{ background: active ? "hsl(var(--foreground) / 0.25)" : RED, color: "hsl(var(--foreground))" }}
-                  >
-                    {t.count > 99 ? "99+" : t.count}
-                  </span>
-                )}
+                <span className="relative inline-flex h-full items-center justify-center gap-1.5">
+                  {t.label}
+                  {t.count > 0 && (
+                    <span className="text-[13px] font-bold text-primary">{t.count > 99 ? "99+" : t.count}</span>
+                  )}
+                  {active && <span className="absolute -bottom-px left-0 right-0 h-1 rounded-full bg-primary" />}
+                </span>
               </button>
             );
           })}
         </div>
-      </header>
+      </div>
 
-      {/* Recent (Telegram "People" strip) */}
-      {!loading && recents.length > 0 && (
-        <div className="pt-3 pb-1 border-b" style={{ borderColor: "hsl(var(--border))" }}>
-          <div className="px-4 flex items-center gap-4 overflow-x-auto scrollbar-hide">
-            <button
-              onClick={() => setComposerOpen(true)}
-              className="shrink-0 flex flex-col items-center gap-1.5 w-16"
-            >
-              <div
-                className="h-14 w-14 rounded-full grid place-items-center"
-                style={{ background: "hsl(var(--secondary))", border: "1.5px dashed hsl(var(--border))" }}
-              >
-                <SquarePen className="h-5 w-5 text-foreground/70" />
-              </div>
-              <span className="text-[11px] text-muted-foreground truncate w-full text-center">New</span>
-            </button>
-            {recents.map((c) => {
-              const other = c.members[0];
-              const name = c.is_group ? (c.title || "Group") : (other?.display_name || other?.username || "?");
-              const avatarUrl = c.is_group ? c.avatar_url : other?.avatar_url;
-              const handleSeed = c.is_group ? (c.title || c.id) : other?.username;
-              return (
-                <Link to={`/messages/${c.id}`} key={c.id} className="shrink-0 flex flex-col items-center gap-1.5 w-16">
-                  <div className="relative">
-                    <div
-                      className="rounded-full p-[2px]"
-                      style={c.unread > 0 ? { background: "conic-gradient(from 210deg, hsl(var(--wa-green)), hsl(158 55% 55%), hsl(var(--wa-green)))" } : { background: "transparent" }}
-                    >
-                      {avatarUrl ? (
-                        <img src={avatarUrl} className="h-14 w-14 rounded-full object-cover" style={{ border: c.unread > 0 ? "2px solid hsl(var(--background))" : "none" }} />
-                      ) : (
-                        <div className="h-14 w-14 rounded-full overflow-hidden" style={{ border: c.unread > 0 ? "2px solid hsl(var(--background))" : "none" }}>
-                          <AuraAvatar gradient={gradientFor(handleSeed)} size="md" initials={initialsOf(name)} />
-                        </div>
-                      )}
-                    </div>
-                    <span
-                      className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full"
-                      style={{ background: "#22c55e", border: "2px solid hsl(var(--background))" }}
-                    />
-                  </div>
-                  <span className="text-[11px] text-foreground/80 truncate w-full text-center">{name.split(" ")[0]}</span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Chat list */}
-      <div className="pt-1">
-        {loading && <p className="text-sm text-muted-foreground text-center py-10">Loading…</p>}
+      {/* Conversation list */}
+      <div>
+        {loading && <p className="text-[15px] text-muted-foreground text-center py-10">Loading…</p>}
         {!loading && convs.length === 0 && (
           <EmptyState
             icon={MessageCircle}
-            title="Your messages"
-            subtitle="Send a private message to start a conversation."
-            cta={{ label: "New message", onClick: () => setComposerOpen(true) }}
+            title="Welcome to your inbox!"
+            subtitle="Drop a line, share posts and more with private conversations between you and others."
+            cta={{ label: "Write a message", onClick: () => setComposerOpen(true) }}
             size="lg"
           />
         )}
         {!loading && convs.length > 0 && filtered.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-10">No matches.</p>
+          <p className="text-[15px] text-muted-foreground text-center py-10">No conversations found.</p>
         )}
-        <ul>
-          {filtered.map((c, i) => {
+        <ul className="divide-y divide-border">
+          {filtered.map((c) => {
             const unread = c.unread > 0;
             const other = c.members[0];
-            const name = c.is_group ? (c.title || c.members.map((m) => m.display_name || m.username).slice(0, 3).join(", ") || "Group") : (other?.display_name || other?.username || "Conversation");
+            const name = c.is_group
+              ? (c.title || c.members.map((m) => m.display_name || m.username).slice(0, 3).join(", ") || "Group")
+              : (other?.display_name || other?.username || "Conversation");
+            const handle = c.is_group ? null : other?.username;
             const avatarUrl = c.is_group ? (c.avatar_url || other?.avatar_url || null) : (other?.avatar_url || null);
-            const handleSeed = c.is_group ? (c.title || c.id) : (other?.username);
-            const iSent = c.last_sender_id === user?.id;
-            const pinned = i === 0 && !unread && !!c.last; // mock: top row shown as pinned when read
+            const handleSeed = c.is_group ? (c.title || c.id) : other?.username;
             return (
               <li key={c.id}>
-                <motion.div
-                  whileTap={{ scale: 0.995 }}
-                  className="relative"
+                <Link
+                  to={`/messages/${c.id}`}
+                  className={cn(
+                    "flex gap-3 px-4 py-3 transition-colors hover:bg-secondary/30 active:bg-secondary/60",
+                    unread && "bg-primary/[0.06]",
+                  )}
                 >
-                  <Link
-                    to={`/messages/${c.id}`}
-                    className="flex items-center gap-3 px-4 py-3 transition-colors"
-                    style={{ background: unread ? "rgba(229,9,20,0.035)" : "transparent" }}
-                  >
-                    <div className="relative shrink-0">
-                      {avatarUrl ? (
-                        <img src={avatarUrl} alt="" className="h-[54px] w-[54px] rounded-full object-cover" />
-                      ) : (
-                        <div className="h-[54px] w-[54px] rounded-full overflow-hidden">
-                          <AuraAvatar gradient={gradientFor(handleSeed)} size="lg" initials={initialsOf(name)} />
-                        </div>
+                  {/* Avatar */}
+                  <div className="shrink-0">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full overflow-hidden">
+                        <AuraAvatar gradient={gradientFor(handleSeed)} size="sm" initials={initialsOf(name)} />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    {/* Name · @handle · timestamp, all one 15px line */}
+                    <div className="flex items-center gap-1 text-[15px] leading-5">
+                      <span className="font-bold truncate">{name}</span>
+                      {!c.is_group && other?.verification_kind && (
+                        <VerificationBadge kind={other.verification_kind as any} />
                       )}
-                      {c.is_group ? (
-                        <span className="absolute -bottom-0.5 -right-0.5 h-5 w-5 grid place-items-center rounded-full" style={{ background: "hsl(var(--background))" }}>
-                          <span className="h-4 w-4 rounded-full grid place-items-center" style={{ background: RED }}>
-                            <Users className="h-2.5 w-2.5 text-foreground" />
-                          </span>
+                      {handle && <span className="text-muted-foreground truncate">@{handle}</span>}
+                      {c.is_group && (
+                        <span className="text-muted-foreground shrink-0 inline-flex items-center gap-1">
+                          <Users className="h-3.5 w-3.5" />
                         </span>
-                      ) : (
-                        <span
-                          className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full"
-                          style={{ background: "#22c55e", border: "2px solid hsl(var(--background))" }}
-                        />
                       )}
+                      <span className="text-muted-foreground shrink-0">·</span>
+                      <span className="text-muted-foreground shrink-0">{chatTime(c.last_message_at)}</span>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <p className="truncate text-[15.5px] font-semibold text-foreground">{name}</p>
-                        {!c.is_group && other?.verification_kind && <VerificationBadge kind={other.verification_kind as any} />}
-                        <div className="ml-auto flex items-center gap-1 shrink-0">
-                          {pinned && <Pin className="h-3 w-3 text-muted-foreground rotate-45" />}
-                          <span className="text-[11.5px]" style={{ color: unread ? RED : "hsl(var(--muted-foreground))" }}>
-                            {chatTime(c.last_message_at)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {iSent && c.last && (
-                          c.last_read ? (
-                            <CheckCheck className="h-3.5 w-3.5 shrink-0" style={{ color: "#60a5fa" }} />
-                          ) : (
-                            <Check className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                          )
-                        )}
-                        <p
-                          className="text-[13.5px] truncate flex-1"
-                          style={{ color: unread ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))" }}
-                        >
-                          {c.last ?? "Tap to start chatting"}
-                        </p>
-                        {unread && (
-                          <span
-                            className="shrink-0 inline-flex items-center justify-center min-w-[20px] h-[20px] px-1.5 rounded-full text-[11px] font-bold text-foreground"
-                            style={{ background: RED, boxShadow: "0 4px 12px hsl(var(--wa-green) / 0.4)" }}
-                          >
-                            {c.unread > 99 ? "99+" : c.unread}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                </motion.div>
+                    {/* Preview */}
+                    <p
+                      className={cn(
+                        "text-[15px] leading-5 truncate mt-0.5",
+                        unread ? "text-foreground font-medium" : "text-muted-foreground",
+                      )}
+                    >
+                      {c.last ?? "Start a new conversation"}
+                    </p>
+                  </div>
+
+                  {unread && (
+                    <span className="shrink-0 self-center h-2 w-2 rounded-full bg-primary" aria-label="Unread" />
+                  )}
+                </Link>
               </li>
             );
           })}
         </ul>
-
-        {!loading && convs.length > 0 && (
-          <button
-            className="w-full flex items-center gap-3 px-4 py-4 mt-1 hover:bg-muted/30"
-            style={{ borderTop: "1px solid hsl(var(--border))" }}
-            onClick={() => toast.info("Archive coming soon")}
-          >
-            <div className="h-11 w-11 rounded-full grid place-items-center shrink-0" style={{ background: "hsl(var(--secondary))" }}>
-              <Archive className="h-[18px] w-[18px] text-foreground/70" />
-            </div>
-            <div className="flex-1 text-left">
-              <p className="text-[14.5px] font-semibold text-foreground">Archived</p>
-              <p className="text-[12px] text-muted-foreground">Hidden chats you've saved</p>
-            </div>
-          </button>
-        )}
       </div>
+
+      {/* X blue FAB - new message */}
+      <button
+        onClick={() => setComposerOpen(true)}
+        aria-label="New message"
+        className="fixed z-40 bottom-24 right-4 h-14 w-14 rounded-full bg-primary hover:bg-primary-hover text-primary-foreground grid place-items-center shadow-elevated active:scale-95 transition-colors"
+      >
+        <Mail className="h-6 w-6" strokeWidth={2} />
+      </button>
 
       {/* New chat sheet */}
       <Sheet open={composerOpen} onOpenChange={setComposerOpen}>
         <SheetContent
           side="bottom"
-          className="border-t h-[80vh] rounded-t-3xl p-0 flex flex-col"
-          style={{ background: "hsl(var(--background))", borderColor: "hsl(var(--border))", color: "hsl(var(--foreground))" }}
+          className="h-[80vh] rounded-t-2xl p-0 flex flex-col bg-background border-t border-border"
         >
-          <SheetHeader className="px-5 py-4" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
-            <SheetTitle className="text-base font-semibold text-foreground text-left">New message</SheetTitle>
+          <SheetHeader className="px-4 py-3 border-b border-border">
+            <SheetTitle className="text-[17px] font-bold text-left">New message</SheetTitle>
           </SheetHeader>
           <div className="p-4">
-            <div className="flex items-center gap-2 rounded-2xl px-4 py-2.5" style={{ background: "hsl(var(--secondary))", border: "1px solid hsl(var(--border))" }}>
-              <Search className="h-4 w-4 text-muted-foreground" />
+            <div className="h-9 rounded-full bg-secondary flex items-center gap-3 px-4 focus-within:bg-background focus-within:ring-1 focus-within:ring-primary transition-colors">
+              <Search className="h-[18px] w-[18px] text-muted-foreground shrink-0" />
               <input
                 autoFocus
                 value={composerQuery}
                 onChange={(e) => setComposerQuery(e.target.value)}
-                placeholder="Search by name or @username"
-                className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground"
+                placeholder="Search people"
+                className="flex-1 min-w-0 bg-transparent outline-none text-[15px] placeholder:text-muted-foreground"
               />
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto divide-y divide-border">
             {composerQuery.trim() && results.length === 0 && (
-              <p className="text-sm text-muted-foreground text-center py-10">No results.</p>
+              <p className="text-[15px] text-muted-foreground text-center py-10">No results.</p>
             )}
             {results.map((p) => (
               <button
                 key={p.user_id}
                 disabled={starting}
                 onClick={() => startChat(p.user_id)}
-                className="w-full flex items-center gap-3 px-4 py-3 text-left disabled:opacity-50 hover:bg-muted/30"
+                className="w-full flex items-center gap-3 px-4 py-3 text-left disabled:opacity-50 hover:bg-secondary/30 transition-colors"
               >
                 {p.avatar_url ? (
-                  <img src={p.avatar_url} alt="" className="h-11 w-11 rounded-full object-cover" />
+                  <img src={p.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
                 ) : (
-                  <AuraAvatar gradient={gradientFor(p.username)} size="md" initials={initialsOf(p.display_name || p.username)} />
+                  <AuraAvatar gradient={gradientFor(p.username)} size="sm" initials={initialsOf(p.display_name || p.username)} />
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm flex items-center gap-1 truncate text-foreground">
+                  <p className="text-[15px] font-bold flex items-center gap-1 truncate">
                     {p.display_name || p.username}
                     {p.verification_kind && <VerificationBadge kind={p.verification_kind as any} />}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">@{p.username}</p>
+                  <p className="text-[15px] text-muted-foreground truncate leading-5">@{p.username}</p>
                 </div>
               </button>
             ))}

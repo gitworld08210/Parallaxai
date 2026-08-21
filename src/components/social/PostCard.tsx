@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Heart, MessageCircle, Repeat2, Send, Bookmark, MoreHorizontal, BarChart3,
   FolderPlus, Trash2, Flag, Sparkles, ShieldCheck,
@@ -30,6 +30,7 @@ export type FeedPost = {
   media_type: string | null;
   like_count: number;
   comment_count: number;
+  view_count?: number | null;
   created_at: string;
   has_certificate?: boolean | null;
   profile: {
@@ -62,6 +63,7 @@ const linkify = (text: string) =>
 
 export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComments: (id: string) => void }) => {
   const { user } = useAuth();
+  const nav = useNavigate();
   const [liked, setLiked] = useState(post.liked);
   const [likes, setLikes] = useState(post.like_count);
   const [saved, setSaved] = useState(false);
@@ -70,6 +72,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
   const [reportOpen, setReportOpen] = useState(false);
   const [tipOpen, setTipOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [views, setViews] = useState(post.view_count ?? 0);
   const [burst, setBurst] = useState(0);
   const [collabs, setCollabs] = useState<NonNullable<FeedPost["collaborators"]>>(post.collaborators ?? []);
   const lastTap = useRef(0);
@@ -79,6 +82,8 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
   const tier: "genesis" | "founder" = post.profile?.join_era === "genesis" ? "genesis" : "founder";
 
   useEffect(() => { setLiked(post.liked); setLikes(post.like_count); }, [post.liked, post.like_count]);
+
+  useEffect(() => { setViews(post.view_count ?? 0); }, [post.id, post.view_count]);
 
   useEffect(() => {
     if (!user) return;
@@ -109,7 +114,8 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
         if (e.isIntersecting && e.intersectionRatio >= 0.6 && !viewedThisSession.has(post.id)) {
           viewedThisSession.add(post.id);
           try {
-            const currentViewCount = (post as any).view_count ?? 0;
+            const currentViewCount = post.view_count ?? 0;
+            setViews(currentViewCount + 1);
             supabase
               .from('posts')
               .update({ view_count: currentViewCount + 1 })
@@ -220,7 +226,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
         {/* Content column */}
         <div className="flex-1 min-w-0">
           {/* Name row - X style: Name + badge + @handle + dot + time all in one line */}
-          <header className="flex items-center gap-1 text-[14px] leading-tight">
+          <header className="flex items-center gap-1 text-[15px] leading-5">
             <Link to={`/u/${handle}`} className="font-bold truncate hover:underline">{name}</Link>
             {isFounder && <FounderBadge tier={tier} size={12} />}
             {post.profile?.verification_kind
@@ -287,7 +293,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
           </header>
 
           {collabs.length > 0 && (
-            <p className="text-[12px] text-muted-foreground truncate mt-0.5">
+            <p className="text-[13px] text-muted-foreground truncate mt-0.5">
               with {collabs.slice(0, 2).map((c, i) => (
                 <span key={c.username}>
                   {i > 0 && " & "}
@@ -300,7 +306,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
 
           {/* Caption */}
           {caption && (
-            <p className="mt-1 text-[15px] leading-snug whitespace-pre-wrap break-words">
+            <p className="mt-0.5 text-[15px] leading-5 whitespace-pre-wrap break-words">
               {linkify(shortCaption)}
               {longCaption && !expanded && (
                 <>
@@ -328,8 +334,8 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
             </div>
           )}
 
-          {/* X-style action bar: reply, repost, like, bookmark, share */}
-          <div className="mt-2 -ml-2 flex items-center justify-between max-w-md pr-2 text-muted-foreground">
+          {/* X action bar - exact order: reply, repost, like, views, bookmark, share */}
+          <div className="mt-3 -ml-2 flex items-center justify-between max-w-[425px] text-muted-foreground">
             <ActionBtn
               label="Reply"
               onClick={() => onOpenComments(post.id)}
@@ -342,8 +348,8 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
               label="Repost"
               onClick={() => setShareOpen(true)}
               icon={<Repeat2 className="h-[18px] w-[18px]" strokeWidth={1.8} />}
-              hoverClass="group-hover:text-emerald-500 group-hover:bg-emerald-500/10"
-              textClass="group-hover:text-emerald-500"
+              hoverClass="group-hover:text-repost group-hover:bg-repost/10"
+              textClass="group-hover:text-repost"
             />
             <ActionBtn
               label={liked ? "Unlike" : "Like"}
@@ -352,16 +358,24 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
                 <Heart
                   className={cn(
                     "h-[18px] w-[18px] transition-transform",
-                    liked ? "fill-rose-500 text-rose-500 scale-110" : "",
+                    liked ? "fill-like text-like scale-110" : "",
                   )}
                   strokeWidth={1.8}
                 />
               }
               count={likes}
               active={liked}
-              activeColor="text-rose-500"
-              hoverClass="group-hover:text-rose-500 group-hover:bg-rose-500/10"
-              textClass="group-hover:text-rose-500"
+              activeColor="text-like"
+              hoverClass="group-hover:text-like group-hover:bg-like/10"
+              textClass="group-hover:text-like"
+            />
+            <ActionBtn
+              label="Views"
+              onClick={() => { if (isOwner) nav(`/p/${post.id}/insights`); }}
+              icon={<BarChart3 className="h-[18px] w-[18px]" strokeWidth={1.8} />}
+              count={views}
+              hoverClass="group-hover:text-primary group-hover:bg-primary/10"
+              textClass="group-hover:text-primary"
             />
             <ActionBtn
               label="Save"
@@ -431,20 +445,20 @@ const ActionBtn = ({
     onClick={onClick}
     aria-label={label}
     className={cn(
-      "group inline-flex items-center gap-1 -mx-1 px-2 py-1 rounded-full transition-colors active:scale-95 duration-fast",
+      "group inline-flex items-center gap-0.5 rounded-full transition-colors active:scale-95 duration-fast",
       active && activeColor,
     )}
   >
     <span
       className={cn(
-        "grid place-items-center h-8 w-8 rounded-full transition-colors",
+        "grid place-items-center h-[30px] w-[30px] rounded-full transition-colors",
         hoverClass,
       )}
     >
       {icon}
     </span>
     {count !== undefined && count > 0 && (
-      <span className={cn("text-[13px] leading-none tabular-nums transition-colors", active ? activeColor : textClass)}>
+      <span className={cn("pr-1 text-[13px] leading-none tabular-nums transition-colors", active ? activeColor : textClass)}>
         {fmt(count)}
       </span>
     )}

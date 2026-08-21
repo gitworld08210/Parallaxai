@@ -18,7 +18,7 @@ interface Props<T extends string> {
 export const StickyTabs = <T extends string>({ tabs, value, onChange, stickyTop = 56 }: Props<T>) => {
   return (
     <div
-      className="sticky z-20 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 border-b border-border"
+      className="sticky z-20 bg-background border-b border-border"
       style={{ top: stickyTop }}
     >
       <div role="tablist" className="flex overflow-x-auto no-scrollbar">
@@ -33,7 +33,7 @@ export const StickyTabs = <T extends string>({ tabs, value, onChange, stickyTop 
               aria-controls={`panel-${t.id}`}
               onClick={() => onChange(t.id)}
               className={cn(
-                "relative flex-1 min-w-[90px] px-4 h-12 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-none",
+                "relative flex-1 min-w-[90px] px-4 h-[53px] text-[15px] font-semibold transition-colors hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-none",
                 active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
