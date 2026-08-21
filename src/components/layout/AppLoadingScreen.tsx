@@ -31,17 +31,47 @@ export const AppLoadingScreen = ({
   }, [navigate, onTimeout, timeoutMs]);
 
   return (
-    <div className="min-h-screen bg-[#050505] grid place-items-center relative overflow-hidden">
-      {/* Subtle radial gradient overlay */}
-      <div className="absolute inset-0 bg-gradient-radial from-white/[0.02] via-transparent to-transparent" />
+    <motion.div
+      className="min-h-screen bg-background grid place-items-center relative overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
+    >
+      {/* Animated gradient orbs */}
+      <motion.div
+        className="absolute top-1/4 -left-20 h-72 w-72 rounded-full bg-primary/20 blur-[100px]"
+        animate={{
+          x: [0, 40, 0],
+          y: [0, -30, 0],
+          scale: [1, 1.2, 1],
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute bottom-1/4 -right-20 h-64 w-64 rounded-full bg-primary/15 blur-[80px]"
+        animate={{
+          x: [0, -30, 0],
+          y: [0, 20, 0],
+          scale: [1.1, 0.9, 1.1],
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-48 w-48 rounded-full bg-primary/10 blur-[60px]"
+        animate={{
+          scale: [0.8, 1.3, 0.8],
+          opacity: [0.3, 0.6, 0.3],
+        }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+      />
 
-      <div className="flex flex-col items-center gap-6 z-10">
+      <div className="flex flex-col items-center gap-8 z-10">
         {/* Animated brand text */}
         <motion.span
-          className="text-5xl font-serif italic tracking-tighter text-white drop-shadow-sm select-none"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="text-6xl font-serif italic tracking-tighter text-white drop-shadow-sm select-none"
+          initial={{ opacity: 0, scale: 0.9, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
         >
           Parallax
         </motion.span>
@@ -56,14 +86,16 @@ export const AppLoadingScreen = ({
           Loading...
         </motion.p>
 
-        {/* Breathing dot indicator */}
-        <motion.div
-          className="h-1.5 w-1.5 rounded-full bg-primary"
-          animate={{ scale: [1, 1.8, 1], opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-        />
+        {/* Animated gradient line indicator */}
+        <div className="w-48 h-1 rounded-full bg-muted overflow-hidden">
+          <motion.div
+            className="h-full w-1/3 rounded-full bg-gradient-to-r from-primary via-primary/80 to-primary/40"
+            animate={{ x: ["-100%", "300%"] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

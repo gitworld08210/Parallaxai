@@ -142,7 +142,7 @@ const Feed = () => {
       {/* Instagram-style translucent top chrome */}
       <div
         className={cn(
-          "sticky top-0 z-30 bg-black/80 backdrop-blur-xl border-b border-white/[0.05] transition-transform duration-300",
+          "sticky top-0 z-30 bg-background/85 backdrop-blur-xl border-b border-border/50 transition-transform duration-300",
           chromeHidden ? "-translate-y-full" : "translate-y-0",
         )}
       >
@@ -159,7 +159,7 @@ const Feed = () => {
                 </button>
               }
             />
-            <span className="font-serif italic text-2xl tracking-tighter">
+            <span className="font-serif italic text-3xl tracking-tighter">
               Parallax
             </span>
           </div>
@@ -198,7 +198,7 @@ const Feed = () => {
                   {active && (
                     <motion.span
                       layoutId="feed-tab-underline"
-                      className="absolute -bottom-px left-0 right-0 h-1 rounded-full bg-primary"
+                      className="absolute -bottom-px left-0 right-0 h-1.5 rounded-full bg-gradient-to-r from-primary to-primary/60"
                       transition={{ type: "spring", stiffness: 500, damping: 40 }}
                     />
                   )}
@@ -218,7 +218,7 @@ const Feed = () => {
 
       <StoriesRail />
 
-      <section className="pb-24">
+      <section className="pt-4 pb-24">
         {loading && posts.length === 0 && <FeedSkeleton count={2} />}
         {!loading && posts.length === 0 && (
           tab === "following" ? (

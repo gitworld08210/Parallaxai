@@ -211,7 +211,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
   const shortCaption = longCaption && !expanded ? caption.slice(0, 240) : caption;
 
   return (
-    <article ref={articleRef} className="bg-black px-4 pt-3 pb-3 border-b border-white/[0.05] transition-colors">
+    <article ref={articleRef} className="bg-card px-4 pt-3 pb-3 border-b border-border hover:bg-card/80 transition-colors">
       {/* TikTok/Insta merge style: clean focus on content */}
       <div className="flex gap-3">
         {/* Avatar column */}
@@ -220,7 +220,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
             <img
               src={getProfileAvatarUrl(post.profile.avatar_url)}
               alt={name}
-              className="h-10 w-10 rounded-full object-cover ring-1 ring-border"
+              className="h-10 w-10 rounded-full object-cover ring-1 ring-border hover:ring-2 hover:ring-primary/20 transition-all"
             />
           ) : (
             <AuraAvatar gradient={gradientFor(handle)} size="sm" initials={initialsOf(name)} />
@@ -327,13 +327,15 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
           {post.media_url && (
             <div
               onClick={onMediaTap}
-              className="relative mt-2 rounded-xl overflow-hidden border border-white/5 bg-muted select-none"
+              className="relative mt-2 rounded-2xl overflow-hidden border border-border bg-muted select-none"
             >
               {post.media_type === "video" ? (
                 <video src={post.media_url} controls playsInline className="w-full max-h-[560px] object-cover" />
               ) : (
                 <img src={getFeedImageUrl(post.media_url)} alt="" className="w-full max-h-[560px] object-cover" draggable={false} loading="lazy" />
               )}
+              {/* Inner shadow overlay for depth */}
+              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
               <DoubleTapHeart trigger={burst} />
             </div>
           )}
