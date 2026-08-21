@@ -2,7 +2,7 @@
   "id": "FEAT-003",
   "type": "feat",
   "description": "Migrate all Firestore reads/writes to Supabase for social features (posts, likes, comments, stories, follows, saves, notifications, unread_counts) and wallet/transaction features (wallets, transactions, coin_purchases, payment_settings, tips). Also migrate the useInfiniteFirestore hook to a Supabase-based infinite query pattern, and update all components that use these features.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create src/hooks/useInfiniteSupabase.ts: A cursor-based pagination hook that replaces useInfiniteFirestore.ts but queries Supabase instead of Firestore. Accept a table name, query options (filters, ordering), and pageSize.",
     "Migrate src/components/social/PostCard.tsx: Replace all Firestore operations (getDoc, setDoc, deleteDoc, updateDoc, increment on likes, saves, posts, view_count) with equivalent supabase.from() calls. Import supabase from '@/integrations/supabase/client'. Remove import of db from '@/lib/firebase' and all firebase/firestore imports.",
@@ -36,5 +36,5 @@
     "Run 'bun run test -- --run' and confirm tests pass"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Feed.tsx and Reels.tsx also imported useInfiniteFirestore and had to be migrated (not in original plan). Test runner has 7 pre-existing vitest/bun internal errors (ReferenceError: Cannot access listeners before initialization) that exist on base state. Build succeeds. TypeScript check passes with no errors. The 1 actual test still passes."
 }
