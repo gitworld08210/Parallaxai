@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Migrate AuthProvider from Firebase Auth to Supabase Auth. Replace all Firebase authentication (email/password sign-up/sign-in, Google OAuth, onAuthStateChanged, token refresh) with Supabase equivalents (supabase.auth.signUp, supabase.auth.signInWithPassword, supabase.auth.signInWithOAuth for Google, supabase.auth.onAuthStateChange). Update Auth.tsx page, AccountSwitcherSheet.tsx, multiAccount.ts, and any other files using Firebase Auth directly.",
+  "status": "pending",
+  "steps": [
+    "Rewrite src/contexts/AuthProvider.tsx: Replace Firebase onAuthStateChanged with supabase.auth.onAuthStateChange. Replace firebaseSignOut with supabase.auth.signOut. Replace createUserWithEmailAndPassword with supabase.auth.signUp. Replace signInWithEmailAndPassword with supabase.auth.signInWithPassword. Remove Firebase token refresh logic. Map Supabase user to the existing User/Profile types. Keep createProfileInSupabase and profile hydration logic intact.",
+    "Rewrite src/pages/Auth.tsx: Replace signInWithEmailAndPassword(auth, ...) with supabase.auth.signInWithPassword. Replace createUserWithEmailAndPassword(auth, ...) with supabase.auth.signUp. Replace signInWithPopup(auth, googleProvider) with supabase.auth.signInWithOAuth({ provider: 'google' }). Replace profile reads from Firestore doc(db, 'profiles', uid) with supabase.from('profiles').select('*').eq('user_id', uid). Replace profile writes (setDoc to Firestore 'profiles') with supabase.from('profiles').upsert(...). Remove the Firestore 'usernames' collection writes (consolidate into profiles table).",
+    "Update src/components/layout/AccountSwitcherSheet.tsx: Replace signInWithEmailAndPassword from firebase/auth with supabase.auth.signInWithPassword. Remove import of auth and db from @/lib/firebase. Remove Firestore getDoc for profiles, use supabase.from('profiles').",
+    "Update src/lib/multiAccount.ts: Remove Firebase auth imports. Update switchToAccount to use supabase.auth.setSession or note it requires re-login via Supabase.",
+    "Update src/lib/signupChecks.ts: Replace Firestore reads/writes (doc(db, 'usernames', ...), doc(db, 'email_accounts', ...)) with supabase.from('usernames') and supabase.from('email_accounts') or supabase RPC calls.",
+    "Run TypeScript check and build to confirm compilation"
+  ],
+  "acceptance_criteria": [
+    "AuthProvider uses supabase.auth.onAuthStateChange instead of Firebase onAuthStateChanged",
+    "Sign-up creates user via supabase.auth.signUp",
+    "Sign-in uses supabase.auth.signInWithPassword",
+    "Google auth uses supabase.auth.signInWithOAuth with provider: 'google'",
+    "No imports from 'firebase/auth' remain in these files",
+    "No imports from '@/lib/firebase' for auth remain in these files",
+    "bunx tsc --noEmit passes (no new errors)",
+    "bun run build succeeds"
+  ],
+  "verification": [
+    "Run 'bunx tsc --noEmit' and confirm no new type errors",
+    "Run 'bun run build' and confirm build succeeds",
+    "Run 'bun run test -- --run' and confirm tests pass"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

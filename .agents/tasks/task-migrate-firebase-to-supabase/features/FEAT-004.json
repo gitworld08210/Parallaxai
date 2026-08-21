@@ -1,0 +1,40 @@
+{
+  "id": "FEAT-004",
+  "type": "feat",
+  "description": "Migrate remaining Firebase-dependent files: admin panels, CallProvider, push notifications, error reporting, platform services. Replace Firebase Storage with Cloudinary for avatar upload. Remove Firebase dependencies entirely.",
+  "status": "pending",
+  "steps": [
+    "Migrate src/services/platform/platform.ts: Remove Firestore import and addDoc for admin_audit_logs. The function already writes to Supabase as secondary - make that the only write. Remove all firebase/firestore imports.",
+    "Migrate src/hooks/usePushNotifications.ts: Replace Firestore setDoc to push_tokens with supabase.from('push_tokens').upsert(). Remove firebase/firestore and @/lib/firebase imports.",
+    "Migrate src/lib/errorReporting.ts: Replace Firestore addDoc to 'error_logs' with supabase.from('error_logs').insert(). Remove firebase imports.",
+    "Migrate src/pages/ProfileCreation.tsx: Replace Firebase Storage upload (ref, uploadBytes, getDownloadURL) with uploadToCloudinary from '@/lib/cloudinary'. Replace Firestore setDoc for profiles with supabase.from('profiles').upsert(). Replace Firestore getDoc/setDoc for usernames with supabase equivalent.",
+    "Migrate src/pages/admin-os/ApprovalsInbox.tsx: Replace all Firestore onSnapshot listeners and runTransaction with supabase real-time and supabase.from() operations.",
+    "Migrate src/pages/admin-os/AppointmentsPanel.tsx: Replace Firestore addDoc/getDocs with supabase.from() equivalents.",
+    "Migrate src/pages/admin-os/VerificationQueue.tsx: Replace Firestore onSnapshot, updateDoc, runTransaction with supabase equivalents.",
+    "Migrate src/contexts/CallProvider.tsx: Replace all Firestore operations (addDoc, updateDoc, getDocs, onSnapshot for calls signaling) with supabase.from() and supabase real-time channels.",
+    "Delete src/lib/firebase.ts entirely - it should no longer be imported anywhere.",
+    "Remove the 'firebase' package from package.json dependencies. Run 'bun install' to update the lockfile.",
+    "Remove firestore.rules and storage.rules files from the project root.",
+    "Update vite.config.ts: Remove the firebase-related manualChunks entries (vendor-firebase-auth, vendor-firebase-storage, vendor-firebase) since Firebase is no longer a dependency.",
+    "Run TypeScript check and full build to confirm everything compiles cleanly"
+  ],
+  "acceptance_criteria": [
+    "src/lib/firebase.ts is deleted",
+    "No file in src/ imports from '@/lib/firebase' or 'firebase/*'",
+    "'firebase' is not in package.json dependencies",
+    "firestore.rules and storage.rules are deleted",
+    "ProfileCreation.tsx uses uploadToCloudinary for avatar uploads",
+    "vite.config.ts has no firebase chunk references",
+    "bunx tsc --noEmit passes (no new errors)",
+    "bun run build succeeds",
+    "bun run test -- --run passes"
+  ],
+  "verification": [
+    "Run 'grep -r \"firebase\" src/ --include=\"*.ts\" --include=\"*.tsx\" | grep -v node_modules' and confirm no firebase imports remain",
+    "Run 'bunx tsc --noEmit' and confirm no new type errors",
+    "Run 'bun run build' and confirm build succeeds",
+    "Run 'bun run test -- --run' and confirm tests pass"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
