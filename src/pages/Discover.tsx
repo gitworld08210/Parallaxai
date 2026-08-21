@@ -69,7 +69,7 @@ const Discover = () => {
     Promise.all([
       loadMoreProfiles(),
       supabase
-        .from('posts' as any)
+        .from('posts')
         .select('*')
         .eq('is_reel', false)
         .order('like_count', { ascending: false })
@@ -110,14 +110,14 @@ const Discover = () => {
     if (isF) {
       next.delete(target); setFollowing(next);
       await supabase
-        .from('follows' as any)
+        .from('follows')
         .delete()
         .eq('follower_id', user.id)
         .eq('following_id', target);
     } else {
       next.add(target); setFollowing(next);
       try {
-        const { error } = await supabase.from('follows' as any).insert({
+        const { error } = await supabase.from('follows').insert({
           id: `${user.id}_${target}`,
           follower_id: user.id,
           following_id: target,

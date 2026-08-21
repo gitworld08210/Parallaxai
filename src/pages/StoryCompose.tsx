@@ -76,7 +76,7 @@ const StoryCompose = () => {
     setBusy(true);
     try {
       const url = await uploadToCloudinary(file);
-      const { data: storyDoc, error: storyErr } = await supabase.from('stories' as any).insert({
+      const { data: storyDoc, error: storyErr } = await supabase.from('stories').insert({
         user_id: user.id,
         media_url: url,
         media_type: file.type.startsWith("video") ? "video" : "image",
@@ -106,7 +106,7 @@ const StoryCompose = () => {
               ? { prompt: s.prompt }
               : { title: s.title },
         }));
-        await supabase.from('story_stickers' as any).insert(stickerRows as any);
+        await supabase.from('story_stickers').insert(stickerRows as any);
       }
       toast.success("Story added \u2726 \u00b7 expires in 24h");
       nav("/");

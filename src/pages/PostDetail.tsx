@@ -17,12 +17,12 @@ const PostDetail = () => {
   useEffect(() => {
     if (!postId) return;
     (async () => {
-      const { data: postData } = await supabase.from('posts' as any).select('*').eq('id', postId).single();
+      const { data: postData } = await supabase.from('posts').select('*').eq('id', postId).single();
       if (!postData) return;
       const data = postData as any;
       let liked = false;
       if (user) {
-        const { data: likeData } = await supabase.from('likes' as any).select('id').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
+        const { data: likeData } = await supabase.from('likes').select('id').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
         liked = !!likeData;
       }
       setPost({ ...data, liked });

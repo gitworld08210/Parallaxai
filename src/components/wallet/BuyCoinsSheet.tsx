@@ -34,7 +34,7 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
     (async () => {
       try {
         const { data } = await supabase
-          .from('payment_settings' as any)
+          .from('payment_settings')
           .select('*')
           .limit(1)
           .maybeSingle();
@@ -58,7 +58,7 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
     try {
       const packIndex = PACKS.indexOf(pack);
       const { data: newDoc, error } = await supabase
-        .from('coin_purchases' as any)
+        .from('coin_purchases')
         .insert({
           user_id: user.id,
           package_id: `pack_${packIndex}`,
@@ -90,7 +90,7 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
     setLoading(true);
     try {
       const { error } = await supabase
-        .from('coin_purchases' as any)
+        .from('coin_purchases')
         .update({
           utr_number: cleaned,
           status: "submitted",

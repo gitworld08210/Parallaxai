@@ -151,7 +151,7 @@ const Profile = () => {
       if (p) {
         const userId = p.user_id || p.id;
         const { data: postsData } = await supabase
-          .from('posts' as any)
+          .from('posts')
           .select('*')
           .eq('user_id', userId)
           .eq('is_reel', false)
@@ -159,7 +159,7 @@ const Profile = () => {
           .limit(10);
 
         const { data: reelsData } = await supabase
-          .from('posts' as any)
+          .from('posts')
           .select('*')
           .eq('user_id', userId)
           .eq('is_reel', true)
@@ -173,7 +173,7 @@ const Profile = () => {
         const allIds = [...pdata, ...rdata].map((d: any) => d.id);
         if (user && allIds.length) {
           const { data: likesData } = await supabase
-            .from('likes' as any)
+            .from('likes')
             .select('post_id')
             .eq('user_id', user.uid)
             .in('post_id', allIds);
@@ -192,7 +192,7 @@ const Profile = () => {
 
         if (user && userId !== user.uid) {
           const { data: followData } = await supabase
-            .from('follows' as any)
+            .from('follows')
             .select('id')
             .eq('follower_id', user.uid)
             .eq('following_id', userId)
@@ -200,7 +200,7 @@ const Profile = () => {
           setIsFollowing(!!(followData as any[])?.length);
           
           const { data: blockData } = await supabase
-            .from('blocks' as any)
+            .from('blocks')
             .select('id')
             .eq('blocker_id', user.uid)
             .eq('blocked_id', userId)
@@ -208,7 +208,7 @@ const Profile = () => {
           setIsBlocked(!!(blockData as any[])?.length);
 
           const { data: muteData } = await supabase
-            .from('mutes' as any)
+            .from('mutes')
             .select('id')
             .eq('muter_id', user.uid)
             .eq('muted_id', userId)
@@ -224,13 +224,13 @@ const Profile = () => {
     if (!user || !profile) return;
     const blockId = `${user.uid}_${profile.user_id}`;
     if (isBlocked) {
-      await supabase.from('blocks' as any).delete().eq('id', blockId);
+      await supabase.from('blocks').delete().eq('id', blockId);
       setIsBlocked(false);
       toast.success("Unblocked");
     } else {
       setIsBlocked(true);
       try {
-        await supabase.from('blocks' as any).upsert({
+        await supabase.from('blocks').upsert({
           id: blockId,
           blocker_id: user.uid,
           blocked_id: profile.user_id,
@@ -247,13 +247,13 @@ const Profile = () => {
     if (!user || !profile) return;
     const muteId = `${user.uid}_${profile.user_id}`;
     if (isMuted) {
-      await supabase.from('mutes' as any).delete().eq('id', muteId);
+      await supabase.from('mutes').delete().eq('id', muteId);
       setIsMuted(false);
       toast.success("Unmuted");
     } else {
       setIsMuted(true);
       try {
-        await supabase.from('mutes' as any).upsert({
+        await supabase.from('mutes').upsert({
           id: muteId,
           muter_id: user.uid,
           muted_id: profile.user_id,
@@ -271,11 +271,11 @@ const Profile = () => {
     const followId = `${user.uid}_${profile.user_id}`;
     if (isFollowing) {
       setIsFollowing(false);
-      await supabase.from('follows' as any).delete().eq('id', followId);
+      await supabase.from('follows').delete().eq('id', followId);
     } else {
       setIsFollowing(true);
       try {
-        await supabase.from('follows' as any).upsert({
+        await supabase.from('follows').upsert({
           id: followId,
           follower_id: user.uid,
           following_id: profile.user_id,

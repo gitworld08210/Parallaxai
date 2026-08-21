@@ -105,7 +105,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     else if (finalStatus === "declined") label = `🚫 ${kind === "video" ? "Video" : "Voice"} call declined`;
     else if (finalStatus === "cancelled") label = `📵 ${kind === "video" ? "Video" : "Voice"} call cancelled`;
     if (!label) return;
-    await supabase.from('messages' as any).insert({
+    await supabase.from('messages').insert({
       conversation_id: conversationId,
       sender_id: user.uid,
       content: label,
@@ -118,7 +118,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
     const dur = a ? Math.floor((Date.now() - a.startedAt) / 1000) : 0;
     if (a) {
       try {
-        await supabase.from('calls' as any).update({
+        await supabase.from('calls').update({
           status: finalStatus,
           ended_at: new Date().toISOString(),
           duration_sec: finalStatus === "ended" ? dur : 0,
@@ -133,7 +133,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
   const sendSignal = useCallback(async (callId: string, toUser: string, kind: "offer" | "answer" | "ice" | "bye", payload: any) => {
     if (!user) return;
-    await supabase.from('call_signals' as any).insert({
+    await supabase.from('call_signals').insert({
       call_id: callId,
       from_user: user.uid,
       to_user: toUser,
@@ -192,7 +192,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
       const stream = await getUserMedia(kind === "video");
       setLocalStream(stream);
 
-      const { data: callDoc, error: callErr } = await supabase.from('calls' as any).insert({
+      const { data: callDoc, error: callErr } = await supabase.from('calls').insert({
         conversation_id: conversationId,
         caller_id: user.uid,
         callee_id: peer.user_id,
@@ -340,7 +340,7 @@ export const CallProvider = ({ children }: { children: React.ReactNode }) => {
 
       // Fetch any signals that arrived before subscribing
       const { data: signalDocs } = await supabase
-        .from('call_signals' as any)
+        .from('call_signals')
         .select('*')
         .eq('call_id', inc.call_id)
         .eq('from_user', inc.caller_id)

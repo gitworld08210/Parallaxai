@@ -95,7 +95,7 @@ const EditProfile = () => {
       
       // Also try writing to username-indexed doc for resolution efficiency
       if (formData.username) {
-        await supabase.from('usernames' as any).upsert({ 
+        await supabase.from('usernames').upsert({ 
           username: formData.username.toLowerCase(),
           user_id: user.uid,
           uid: user.uid 

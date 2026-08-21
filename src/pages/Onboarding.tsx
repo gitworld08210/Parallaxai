@@ -157,7 +157,7 @@ const Onboarding = () => {
       for (const topic of selectedTopics) {
         interestsMap[topic] = 1.0;
       }
-      await supabase.from('user_interests' as any).upsert({
+      await supabase.from('user_interests').upsert({
         user_id: user.id,
         scores: interestsMap,
       } as any);
@@ -169,7 +169,7 @@ const Onboarding = () => {
           following_id: creatorId,
           created_at: new Date().toISOString(),
         }));
-        await supabase.from('follows' as any).insert(followRows as any);
+        await supabase.from('follows').insert(followRows as any);
       }
 
       // (c) Update profile with onboarded_at and optional avatar/bio

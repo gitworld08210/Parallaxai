@@ -71,7 +71,7 @@ const ReelCompose = () => {
       }
       const url = await uploadToCloudinary(file);
       
-      const { data: postDoc, error: postErr } = await supabase.from('posts' as any).insert({
+      const { data: postDoc, error: postErr } = await supabase.from('posts').insert({
         user_id: user.id,
         content: content.trim() + (music ? `\n\n🎵 ${music}` : ""),
         media_url: url,

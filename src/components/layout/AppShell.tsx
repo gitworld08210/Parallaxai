@@ -20,14 +20,14 @@ export const AppShell = () => {
     // Initial fetch of notification count
     const fetchCounts = async () => {
       const { count } = await supabase
-        .from('notifications' as any)
+        .from('notifications')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('read', false);
       setUnreadNotif(count || 0);
 
       const { count: dmCount } = await supabase
-        .from('unread_counts' as any)
+        .from('unread_counts')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .gt('count', 0);

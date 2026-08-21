@@ -16,7 +16,7 @@ export default function LiveList() {
     (async () => {
       try {
         const { data } = await supabase
-          .from('live_streams' as any)
+          .from('live_streams')
           .select('*')
           .eq('status', 'live')
           .order('started_at', { ascending: false });

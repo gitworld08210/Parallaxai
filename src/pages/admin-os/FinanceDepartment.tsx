@@ -30,7 +30,7 @@ const FinanceDepartment = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('coin_purchases' as any)
+        .from('coin_purchases')
         .select('*')
         .eq('status', 'submitted')
         .order('created_at', { ascending: false });
@@ -56,18 +56,18 @@ const FinanceDepartment = () => {
     setActionLoading(req.id);
     try {
       // Update purchase status
-      await supabase.from('coin_purchases' as any).update({
+      await supabase.from('coin_purchases').update({
         status: "approved",
         approved_at: new Date().toISOString(),
         approved_by: user.id,
-      } as any).eq('id', req.id);
+      }).eq('id', req.id);
 
       // Credit wallet
-      const { data: wallet } = await supabase.from('wallets' as any).select('total').eq('user_id', req.user_id).maybeSingle();
+      const { data: wallet } = await supabase.from('wallets').select('total').eq('user_id', req.user_id).maybeSingle();
       if (wallet) {
-        await supabase.from('wallets' as any).update({ total: (wallet as any).total + req.coins } as any).eq('user_id', req.user_id);
+        await supabase.from('wallets').update({ total: wallet.total + req.coins }).eq('user_id', req.user_id);
       } else {
-        await supabase.from('wallets' as any).insert({ user_id: req.user_id, total: req.coins } as any);
+        await supabase.from('wallets').insert({ user_id: req.user_id, total: req.coins });
       }
 
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
@@ -86,10 +86,10 @@ const FinanceDepartment = () => {
     }
     setActionLoading(req.id);
     try {
-      await supabase.from('coin_purchases' as any).update({
+      await supabase.from('coin_purchases').update({
         status: "rejected",
         admin_note: rejectNote.trim(),
-      } as any).eq('id', req.id);
+      }).eq('id', req.id);
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
       setRejectingId(null);
       setRejectNote("");

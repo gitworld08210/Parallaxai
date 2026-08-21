@@ -21,7 +21,7 @@ export function BecomeCreatorSheet({ open, onOpenChange }: BecomeCreatorSheetPro
       if (!open) return;
       try {
         const { data } = await supabase
-          .from('config' as any)
+          .from('config')
           .select('data')
           .eq('id', 'creator_terms')
           .maybeSingle();
@@ -39,7 +39,7 @@ export function BecomeCreatorSheet({ open, onOpenChange }: BecomeCreatorSheetPro
     setSubmitting(true);
     try {
       const { error } = await supabase
-        .from('profiles' as any)
+        .from('profiles')
         .update({
           is_creator: true,
           creator_terms_version: version,

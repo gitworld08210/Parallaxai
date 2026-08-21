@@ -7,7 +7,7 @@ export const useContentContext = (contentId?: string) => {
   return useQuery({
     queryKey: ['content-context', contentId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('content_context' as any).select('*').eq('content_id', contentId).maybeSingle();
+      const { data, error } = await supabase.from('content_context').select('*').eq('content_id', contentId).maybeSingle();
       if (error) throw error;
       return data as unknown as ContentContext | null;
     },

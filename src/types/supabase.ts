@@ -349,6 +349,7 @@ export type Database = {
           title: string;
           stream_key: string;
           viewer_count: number;
+          total_gifts: number;
           is_live: boolean;
           started_at: string | null;
           ended_at: string | null;
@@ -360,6 +361,7 @@ export type Database = {
           title: string;
           stream_key: string;
           viewer_count?: number;
+          total_gifts?: number;
           is_live?: boolean;
           started_at?: string | null;
           ended_at?: string | null;
@@ -371,6 +373,7 @@ export type Database = {
           title?: string;
           stream_key?: string;
           viewer_count?: number;
+          total_gifts?: number;
           is_live?: boolean;
           started_at?: string | null;
           ended_at?: string | null;
@@ -392,6 +395,7 @@ export type Database = {
           is_reel: boolean;
           status: string;
           has_certificate: boolean;
+          scheduled_for: string | null;
         };
         Insert: {
           id?: string;
@@ -406,6 +410,7 @@ export type Database = {
           is_reel?: boolean;
           status?: string;
           has_certificate?: boolean;
+          scheduled_for?: string | null;
         };
         Update: {
           id?: string;
@@ -420,6 +425,7 @@ export type Database = {
           is_reel?: boolean;
           status?: string;
           has_certificate?: boolean;
+          scheduled_for?: string | null;
         };
       };
       likes: {
@@ -909,17 +915,52 @@ export type Database = {
         Row: {
           id: string;
           member_ids: string[];
+          is_group: boolean;
+          last_message_text: string | null;
+          last_message_at: string | null;
+          typing: Record<string, unknown> | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           member_ids: string[];
+          is_group?: boolean;
+          last_message_text?: string | null;
+          last_message_at?: string | null;
+          typing?: Record<string, unknown> | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           member_ids?: string[];
+          is_group?: boolean;
+          last_message_text?: string | null;
+          last_message_at?: string | null;
+          typing?: Record<string, unknown> | null;
           created_at?: string;
+        };
+      };
+      conversation_reads: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          user_id: string;
+          unread_count: number;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          user_id: string;
+          unread_count?: number;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          conversation_id?: string;
+          user_id?: string;
+          unread_count?: number;
+          updated_at?: string;
         };
       };
       messages: {
@@ -1057,18 +1098,24 @@ export type Database = {
       live_gifts: {
         Row: {
           id: string;
+          stream_id: string | null;
+          gift_id: string | null;
           sender_id: string;
           coins_total: number;
           created_at: string;
         };
         Insert: {
           id?: string;
+          stream_id?: string | null;
+          gift_id?: string | null;
           sender_id: string;
           coins_total: number;
           created_at?: string;
         };
         Update: {
           id?: string;
+          stream_id?: string | null;
+          gift_id?: string | null;
           sender_id?: string;
           coins_total?: number;
           created_at?: string;
@@ -1117,6 +1164,390 @@ export type Database = {
           user_id?: string;
           amount_cents?: number;
           status?: string;
+          created_at?: string;
+        };
+      };
+      // --- Additional tables used in the app ---
+      calls: {
+        Row: {
+          id: string;
+          conversation_id: string;
+          caller_id: string;
+          callee_id: string;
+          kind: string;
+          status: string;
+          started_at: string | null;
+          ended_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          conversation_id: string;
+          caller_id: string;
+          callee_id: string;
+          kind: string;
+          status?: string;
+          started_at?: string | null;
+          ended_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          conversation_id?: string;
+          caller_id?: string;
+          callee_id?: string;
+          kind?: string;
+          status?: string;
+          started_at?: string | null;
+          ended_at?: string | null;
+          created_at?: string;
+        };
+      };
+      call_signals: {
+        Row: {
+          id: string;
+          call_id: string;
+          from_user: string;
+          to_user: string;
+          kind: string;
+          payload: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          call_id: string;
+          from_user: string;
+          to_user: string;
+          kind: string;
+          payload: Record<string, unknown>;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          call_id?: string;
+          from_user?: string;
+          to_user?: string;
+          kind?: string;
+          payload?: Record<string, unknown>;
+          created_at?: string;
+        };
+      };
+      blocks: {
+        Row: {
+          id: string;
+          blocker_id: string;
+          blocked_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          blocker_id: string;
+          blocked_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          blocker_id?: string;
+          blocked_id?: string;
+          created_at?: string;
+        };
+      };
+      mutes: {
+        Row: {
+          id: string;
+          user_id: string;
+          muted_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          muted_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          muted_id?: string;
+          created_at?: string;
+        };
+      };
+      live_chat: {
+        Row: {
+          id: string;
+          stream_id: string;
+          user_id: string;
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          stream_id: string;
+          user_id: string;
+          body: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          stream_id?: string;
+          user_id?: string;
+          body?: string;
+          created_at?: string;
+        };
+      };
+      live_tickets: {
+        Row: {
+          id: string;
+          stream_id: string;
+          user_id: string;
+          coins_paid: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          stream_id: string;
+          user_id: string;
+          coins_paid: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          stream_id?: string;
+          user_id?: string;
+          coins_paid?: number;
+          created_at?: string;
+        };
+      };
+      gift_catalog: {
+        Row: {
+          id: string;
+          name: string;
+          icon: string;
+          cost_coins: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          icon: string;
+          cost_coins: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          icon?: string;
+          cost_coins?: number;
+          created_at?: string;
+        };
+      };
+      creator_subscriptions: {
+        Row: {
+          id: string;
+          subscriber_id: string;
+          creator_id: string;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          subscriber_id: string;
+          creator_id: string;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          subscriber_id?: string;
+          creator_id?: string;
+          status?: string;
+          created_at?: string;
+        };
+      };
+      user_interests: {
+        Row: {
+          id: string;
+          user_id: string;
+          interest: string;
+          weight: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          interest: string;
+          weight?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          interest?: string;
+          weight?: number;
+          created_at?: string;
+        };
+      };
+      ads_user_interests: {
+        Row: {
+          id: string;
+          user_id: string;
+          interest: string;
+          score: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          interest: string;
+          score?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          interest?: string;
+          score?: number;
+          created_at?: string;
+        };
+      };
+      content_context: {
+        Row: {
+          id: string;
+          post_id: string;
+          context: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          context: Record<string, unknown>;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          context?: Record<string, unknown>;
+          created_at?: string;
+        };
+      };
+      content_taxonomy: {
+        Row: {
+          id: string;
+          post_id: string;
+          tags: string[];
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          tags: string[];
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          tags?: string[];
+          created_at?: string;
+        };
+      };
+      ledger: {
+        Row: {
+          id: string;
+          user_id: string;
+          kind: string;
+          amount: number;
+          balance_after: number;
+          reference_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          kind: string;
+          amount: number;
+          balance_after: number;
+          reference_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          kind?: string;
+          amount?: number;
+          balance_after?: number;
+          reference_id?: string | null;
+          created_at?: string;
+        };
+      };
+      story_stickers: {
+        Row: {
+          id: string;
+          story_id: string;
+          type: string;
+          data: Record<string, unknown>;
+          position_x: number;
+          position_y: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          story_id: string;
+          type: string;
+          data: Record<string, unknown>;
+          position_x: number;
+          position_y: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          story_id?: string;
+          type?: string;
+          data?: Record<string, unknown>;
+          position_x?: number;
+          position_y?: number;
+          created_at?: string;
+        };
+      };
+      virtual_world_access: {
+        Row: {
+          id: string;
+          user_id: string;
+          granted_at: string;
+          status: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          granted_at?: string;
+          status?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          granted_at?: string;
+          status?: string;
+        };
+      };
+      virtual_world_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          action: string;
+          data: Record<string, unknown> | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          action: string;
+          data?: Record<string, unknown> | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          action?: string;
+          data?: Record<string, unknown> | null;
           created_at?: string;
         };
       };

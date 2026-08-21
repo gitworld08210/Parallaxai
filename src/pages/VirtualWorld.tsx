@@ -85,7 +85,7 @@ const VirtualWorld = () => {
 
       const { supabase: sb } = await import("@/integrations/supabase/client");
       
-      await sb.from('virtual_world_applications' as any).insert({
+      await sb.from('virtual_world_applications').insert({
         user_id: user.uid,
         full_name: fullName.trim(),
         aadhaar_number: digits,

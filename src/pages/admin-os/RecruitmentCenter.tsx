@@ -13,7 +13,7 @@ const RecruitmentCenter = () => {
 
   useEffect(() => {
     const fetchSessions = async () => {
-      const { data } = await supabase.from('onboarding_sessions' as any).select('*').order('created_at', { ascending: false });
+      const { data } = await supabase.from('onboarding_sessions').select('*').order('created_at', { ascending: false });
       if (data) setSessions(data as any[]);
       setLoading(false);
     };

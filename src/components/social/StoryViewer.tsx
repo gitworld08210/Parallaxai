@@ -33,14 +33,14 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
       (async () => {
         try {
           const { data } = await supabase
-            .from('stories' as any)
+            .from('stories')
             .select('viewers')
             .eq('id', current.id)
             .single();
-          const currentViewers: string[] = (data as any)?.viewers || [];
+          const currentViewers: string[] = data?.viewers || [];
           if (!currentViewers.includes(user.id)) {
             await supabase
-              .from('stories' as any)
+              .from('stories')
               .update({ viewers: [...currentViewers, user.id] })
               .eq('id', current.id);
           }
@@ -75,13 +75,13 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
     if (!user) return toast.error("Sign in");
     try {
       const { data } = await supabase
-        .from('stories' as any)
+        .from('stories')
         .select('reactions')
         .eq('id', current.id)
         .single();
-      const currentReactions: any[] = (data as any)?.reactions || [];
+      const currentReactions: any[] = data?.reactions || [];
       await supabase
-        .from('stories' as any)
+        .from('stories')
         .update({ reactions: [...currentReactions, { user_id: user.id, emoji }] })
         .eq('id', current.id);
       toast.success(`Reacted ${emoji}`);
@@ -96,7 +96,7 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
     try {
       // Find or create conversation
       const { data: convs } = await supabase
-        .from('conversations' as any)
+        .from('conversations')
         .select('*')
         .contains('member_ids', [user.id]);
 
@@ -110,7 +110,7 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
 
       if (!convId) {
         const { data: newConv } = await supabase
-          .from('conversations' as any)
+          .from('conversations')
           .insert({
             member_ids: [user.id, current.user_id],
             created_at: new Date().toISOString(),
@@ -123,7 +123,7 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
       if (!convId) throw new Error("Could not create conversation");
 
       const content = `↩️ Replied to story: ${reply.trim().slice(0, 500)}`;
-      await supabase.from('messages' as any).insert({
+      await supabase.from('messages').insert({
         conversation_id: convId,
         sender_id: user.id,
         content,

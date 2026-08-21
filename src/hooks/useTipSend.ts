@@ -25,46 +25,54 @@ export function useTipSend() {
     }
 
     try {
-      // 1. Read sender wallet
+      // 1. Read sender wallet to check balance
       const { data: senderWallet } = await supabase
-        .from('wallets' as any)
+        .from('wallets')
         .select('total')
         .eq('user_id', senderId)
         .single();
 
-      const currentBalance = (senderWallet as any)?.total || 0;
+      const currentBalance = senderWallet?.total || 0;
 
       if (currentBalance < amount) {
         throw new Error("Insufficient balance");
       }
 
-      // 2. Deduct from sender
-      await supabase
-        .from('wallets' as any)
+      // 2. Deduct from sender using conditional update to prevent negative balance.
+      // The .gte('total', amount) guard ensures the update only succeeds if
+      // balance is still sufficient, preventing race-condition double-spends.
+      const { data: deductResult, error: deductError } = await supabase
+        .from('wallets')
         .update({ total: currentBalance - amount })
-        .eq('user_id', senderId);
+        .eq('user_id', senderId)
+        .gte('total', amount)
+        .select('total')
+        .single();
+
+      if (deductError || !deductResult) {
+        throw new Error("Insufficient balance (concurrent modification)");
+      }
 
       // 3. Credit to recipient (upsert)
       const { data: recipientWallet } = await supabase
-        .from('wallets' as any)
+        .from('wallets')
         .select('total')
         .eq('user_id', recipientId)
         .maybeSingle();
 
       if (recipientWallet) {
-        const recipientBalance = (recipientWallet as any).total || 0;
         await supabase
-          .from('wallets' as any)
-          .update({ total: recipientBalance + amount })
+          .from('wallets')
+          .update({ total: recipientWallet.total + amount })
           .eq('user_id', recipientId);
       } else {
         await supabase
-          .from('wallets' as any)
+          .from('wallets')
           .insert({ user_id: recipientId, total: amount });
       }
 
       // 4. Log transaction
-      await supabase.from('transactions' as any).insert({
+      await supabase.from('transactions').insert({
         sender_id: senderId,
         recipient_id: recipientId,
         amount,

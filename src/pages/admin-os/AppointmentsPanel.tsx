@@ -49,7 +49,7 @@ const AppointmentsPanel = () => {
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
       };
 
-      const { error } = await supabase.from('onboarding_sessions' as any).insert(sessionData as any);
+      const { error } = await supabase.from('onboarding_sessions').insert(sessionData as any);
       if (error) throw error;
       
       toast.success(`Appointment invitation sent to ${email}`);

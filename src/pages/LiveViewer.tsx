@@ -47,7 +47,7 @@ export default function LiveViewer() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await supabase.from('gift_catalog' as any).select('*');
+        const { data } = await supabase.from('gift_catalog').select('*');
         const items: GiftDef[] = (data as any[] || []).map((d: any) => ({ id: d.id, ...d }));
         setCatalog(items);
       } catch (e) {
@@ -61,7 +61,7 @@ export default function LiveViewer() {
     if (!id) return;
     (async () => {
       try {
-        const { data: streamData } = await supabase.from('live_streams' as any).select('*').eq('id', id).single();
+        const { data: streamData } = await supabase.from('live_streams').select('*').eq('id', id).single();
         if (!streamData) { toast.error("Stream not found"); navigate(-1); return; }
         const s = streamData as any as Stream;
         setStream(s);
@@ -73,10 +73,10 @@ export default function LiveViewer() {
         if (!me) { setAccessState(s.access_type === "ticket" ? "needs_ticket" : "needs_sub"); return; }
 
         if (s.access_type === "ticket") {
-          const { data: ticketData } = await supabase.from('live_tickets' as any).select('id').eq('stream_id', s.id).eq('user_id', me);
+          const { data: ticketData } = await supabase.from('live_tickets').select('id').eq('stream_id', s.id).eq('user_id', me);
           setAccessState((ticketData as any[] || []).length > 0 ? "granted" : "needs_ticket");
         } else if (s.access_type === "subscribers_only") {
-          const { data: subData } = await supabase.from('creator_subscriptions' as any).select('id').eq('subscriber_id', me).eq('creator_id', s.host_id).in('status', ['active', 'trialing']);
+          const { data: subData } = await supabase.from('creator_subscriptions').select('id').eq('subscriber_id', me).eq('creator_id', s.host_id).in('status', ['active', 'trialing']);
           setAccessState((subData as any[] || []).length > 0 ? "granted" : "needs_sub");
         }
       } catch (e: any) {
@@ -130,7 +130,7 @@ export default function LiveViewer() {
 
     // Chat
     (async () => {
-      const { data } = await supabase.from('live_chat' as any).select('*').eq('stream_id', id).order('created_at', { ascending: true }).limit(100);
+      const { data } = await supabase.from('live_chat').select('*').eq('stream_id', id).order('created_at', { ascending: true }).limit(100);
       if (data) setChat((data as any[]).slice(-50));
     })();
     const chatCh = supabase.channel(`viewer-chat-${id}`)
@@ -141,7 +141,7 @@ export default function LiveViewer() {
 
     // Gifts
     (async () => {
-      const { data } = await supabase.from('live_gifts' as any).select('*').eq('stream_id', id).order('created_at', { ascending: false }).limit(20);
+      const { data } = await supabase.from('live_gifts').select('*').eq('stream_id', id).order('created_at', { ascending: false }).limit(20);
       if (data) {
         const allGifts = data as any[];
         setGifts(allGifts.slice(0, 8));
@@ -187,12 +187,12 @@ export default function LiveViewer() {
     const body = text.trim();
     setText("");
     try {
-      await supabase.from('live_chat' as any).insert({
+      await supabase.from('live_chat').insert({
         stream_id: id,
         user_id: me,
         body,
         created_at: new Date().toISOString(),
-      } as any);
+      });
     } catch (e) {
       console.warn("Failed to send chat message", e);
     }
@@ -208,27 +208,37 @@ export default function LiveViewer() {
     setBuying(true);
     try {
       // Get viewer balance
-      const { data: viewerWallet } = await supabase.from('wallets' as any).select('total').eq('user_id', me).maybeSingle();
-      const currentBalance = (viewerWallet as any)?.total || 0;
+      const { data: viewerWallet } = await supabase.from('wallets').select('total').eq('user_id', me).maybeSingle();
+      const currentBalance = viewerWallet?.total || 0;
       if (currentBalance < stream.ticket_price_coins) {
         throw new Error("Insufficient coins - top up in Wallet");
       }
-      // Deduct from viewer
-      await supabase.from('wallets' as any).update({ total: currentBalance - stream.ticket_price_coins } as any).eq('user_id', me);
+      // Deduct from viewer using conditional update to prevent negative balance
+      const { data: deductResult, error: deductError } = await supabase
+        .from('wallets')
+        .update({ total: currentBalance - stream.ticket_price_coins })
+        .eq('user_id', me)
+        .gte('total', stream.ticket_price_coins)
+        .select('total')
+        .single();
+
+      if (deductError || !deductResult) {
+        throw new Error("Insufficient coins (concurrent modification)");
+      }
       // Credit host
-      const { data: hostWallet } = await supabase.from('wallets' as any).select('total').eq('user_id', stream.host_id).maybeSingle();
+      const { data: hostWallet } = await supabase.from('wallets').select('total').eq('user_id', stream.host_id).maybeSingle();
       if (hostWallet) {
-        await supabase.from('wallets' as any).update({ total: (hostWallet as any).total + stream.ticket_price_coins } as any).eq('user_id', stream.host_id);
+        await supabase.from('wallets').update({ total: hostWallet.total + stream.ticket_price_coins }).eq('user_id', stream.host_id);
       } else {
-        await supabase.from('wallets' as any).insert({ user_id: stream.host_id, total: stream.ticket_price_coins } as any);
+        await supabase.from('wallets').insert({ user_id: stream.host_id, total: stream.ticket_price_coins });
       }
       // Create ticket record
-      await supabase.from('live_tickets' as any).insert({
+      await supabase.from('live_tickets').insert({
         stream_id: stream.id,
         user_id: me,
         coins_paid: stream.ticket_price_coins,
         created_at: new Date().toISOString(),
-      } as any);
+      });
       toast.success("Unlocked!");
       setAccessState("granted");
     } catch (e: any) {
@@ -247,30 +257,40 @@ export default function LiveViewer() {
     setGiftSheet(false);
     try {
       // Get viewer balance
-      const { data: viewerWallet } = await supabase.from('wallets' as any).select('total').eq('user_id', me).maybeSingle();
-      const currentBalance = (viewerWallet as any)?.total || 0;
+      const { data: viewerWallet } = await supabase.from('wallets').select('total').eq('user_id', me).maybeSingle();
+      const currentBalance = viewerWallet?.total || 0;
       if (currentBalance < g.cost_coins) {
         throw new Error("Insufficient coins - top up in Wallet");
       }
-      // Deduct from viewer
-      await supabase.from('wallets' as any).update({ total: currentBalance - g.cost_coins } as any).eq('user_id', me);
+      // Deduct from viewer using conditional update to prevent negative balance
+      const { data: deductResult, error: deductError } = await supabase
+        .from('wallets')
+        .update({ total: currentBalance - g.cost_coins })
+        .eq('user_id', me)
+        .gte('total', g.cost_coins)
+        .select('total')
+        .single();
+
+      if (deductError || !deductResult) {
+        throw new Error("Insufficient coins (concurrent modification)");
+      }
       // Credit host
-      const { data: hostWallet } = await supabase.from('wallets' as any).select('total').eq('user_id', stream.host_id).maybeSingle();
+      const { data: hostWallet } = await supabase.from('wallets').select('total').eq('user_id', stream.host_id).maybeSingle();
       if (hostWallet) {
-        await supabase.from('wallets' as any).update({ total: (hostWallet as any).total + g.cost_coins } as any).eq('user_id', stream.host_id);
+        await supabase.from('wallets').update({ total: hostWallet.total + g.cost_coins }).eq('user_id', stream.host_id);
       } else {
-        await supabase.from('wallets' as any).insert({ user_id: stream.host_id, total: g.cost_coins } as any);
+        await supabase.from('wallets').insert({ user_id: stream.host_id, total: g.cost_coins });
       }
       // Record the gift event
-      await supabase.from('live_gifts' as any).insert({
+      await supabase.from('live_gifts').insert({
         stream_id: stream.id,
         gift_id: g.id,
         sender_id: me,
         coins_total: g.cost_coins,
         created_at: new Date().toISOString(),
-      } as any);
+      });
       // Increment stream total_gifts
-      await supabase.from('live_streams' as any).update({ total_gifts: (stream.total_gifts || 0) + g.cost_coins } as any).eq('id', stream.id);
+      await supabase.from('live_streams').update({ total_gifts: (stream.total_gifts || 0) + g.cost_coins }).eq('id', stream.id);
 
       // Local animation
       setFlying((f) => [...f, { id: g.id, icon: g.icon, key: Date.now() + Math.random() }]);

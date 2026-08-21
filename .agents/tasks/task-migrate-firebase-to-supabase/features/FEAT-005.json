@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-005",
+  "type": "fix",
+  "description": "Address 6 post-review issues: wallet race conditions, view/comment count stale reads, pervasive 'as any' casts, conversation unread JSONB overwrite, signupChecks non-atomic increment, and ResetPassword session timing.",
+  "status": "in_progress",
+  "steps": [
+    "Fix wallet race condition: use conditional update with .gte('total', amount) to prevent negative balance in useTipSend.ts, LiveViewer.tsx, and FinanceDepartment.tsx",
+    "Fix view/comment count: add comments documenting the known limitation (stale-read increment) in PostCard.tsx and CommentSheet.tsx",
+    "Remove 'as any' casts from all .from() calls where tables are defined in the Database type",
+    "Fix Conversation markRead to use proper JSONB merge pattern instead of overwriting",
+    "Add comment to signupChecks.ts documenting the non-atomic increment limitation",
+    "Fix ResetPassword to guard submit behind session check via onAuthStateChange"
+  ],
+  "acceptance_criteria": [
+    "Wallet updates use conditional .gte() to prevent negative balances",
+    "'as any' casts removed from .from() calls for tables in Database type",
+    "Conversation markRead uses JSONB merge approach (separate unread_counts table)",
+    "ResetPassword form is disabled until session is confirmed via onAuthStateChange",
+    "Known limitations documented with TODO comments",
+    "bunx tsc --noEmit passes",
+    "bun run build succeeds"
+  ],
+  "verification": [
+    "Run 'bunx tsc --noEmit' and confirm no new type errors",
+    "Run 'bun run build' and confirm build succeeds"
+  ],
+  "blocked_reason": null,
+  "findings": null
+}

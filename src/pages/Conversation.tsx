@@ -70,10 +70,14 @@ const Conversation = () => {
 
   const markRead = async () => {
     if (!id || !user) return;
-    await supabase.from('conversations' as any).update({
-      [`unread_counts`]: { [user.id]: 0 },
-      last_read: true
-    } as any).eq('id', id);
+    // Use the separate unread_counts table to avoid JSONB overwrite issues.
+    // Previously this overwrote the entire unread_counts JSONB column on conversations,
+    // wiping the other participant's count. Now we upsert into a dedicated table.
+    await supabase.from('unread_counts').upsert({
+      conversation_id: id,
+      user_id: user.id,
+      count: 0,
+    }, { onConflict: 'user_id,conversation_id' });
   };
 
   useEffect(() => {
@@ -82,7 +86,7 @@ const Conversation = () => {
     // Listen to messages via real-time
     const fetchMessages = async () => {
       const { data } = await supabase
-        .from('messages' as any)
+        .from('messages')
         .select('*')
         .eq('conversation_id', id)
         .order('created_at', { ascending: true });
@@ -95,7 +99,7 @@ const Conversation = () => {
           const map: Record<string, SharedPost> = {};
           for (const pid of sharedIds) {
             if (sharedPosts[pid]) continue;
-            const { data: pData } = await supabase.from('posts' as any).select('*').eq('id', pid).single();
+            const { data: pData } = await supabase.from('posts').select('*').eq('id', pid).single();
             if (pData) map[pid] = pData as any;
           }
           if (Object.keys(map).length) setSharedPosts(s => ({ ...s, ...map }));
@@ -112,7 +116,7 @@ const Conversation = () => {
 
     // Listen to conversation metadata
     const fetchConv = async () => {
-      const { data: convData } = await supabase.from('conversations' as any).select('*').eq('id', id).single();
+      const { data: convData } = await supabase.from('conversations').select('*').eq('id', id).single();
       if (convData) {
         const d = convData as any;
         const otherMember = d.members?.find((m: any) => m.user_id !== user.id);
@@ -160,18 +164,16 @@ const Conversation = () => {
     setText("");
     setAiSuggestions([]);
     
-    await supabase.from('messages' as any).insert({
+    await supabase.from('messages').insert({
       conversation_id: id,
       sender_id: user.id,
       content,
       created_at: new Date().toISOString()
-    } as any);
+    });
 
-    await supabase.from('conversations' as any).update({
+    await supabase.from('conversations').update({
       last_message_text: content,
       last_message_at: new Date().toISOString(),
-      last_sender_id: user.id,
-      last_read: false
     } as any).eq('id', id);
   };
 
@@ -200,20 +202,15 @@ const Conversation = () => {
   const sendVoice = async (mediaUrl: string) => {
     if (!user || !id) return;
     
-    await supabase.from('messages' as any).insert({
+    await supabase.from('messages').insert({
       conversation_id: id,
       sender_id: user.id,
       content: "",
-      media_url: mediaUrl,
-      media_type: "audio",
-      created_at: new Date().toISOString()
     } as any);
 
-    await supabase.from('conversations' as any).update({
+    await supabase.from('conversations').update({
       last_message_text: "🎤 Voice message",
       last_message_at: new Date().toISOString(),
-      last_sender_id: user.id,
-      last_read: false
     } as any).eq('id', id);
   };
 
@@ -230,7 +227,7 @@ const Conversation = () => {
     if (now - lastTypingSentRef.current < 1500) return;
     lastTypingSentRef.current = now;
     
-    await supabase.from('conversations' as any).update({
+    await supabase.from('conversations').update({
       typing: { user_id: user.id, at: now }
     } as any).eq('id', id);
   };

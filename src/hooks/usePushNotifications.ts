@@ -26,7 +26,7 @@ export const usePushNotifications = () => {
             if (disposed) return;
             setToken(registration.value);
             try {
-              await supabase.from('push_tokens' as any).upsert({
+              await supabase.from('push_tokens').upsert({
                 user_id: userId,
                 token: registration.value,
                 platform: Capacitor.getPlatform(),

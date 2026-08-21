@@ -22,7 +22,7 @@ export async function logAdminAction(input: {
   const uid = userData.user?.id;
   if (!uid) return;
 
-  await supabase.from("admin_audit_logs" as any).insert({
+  await supabase.from("admin_audit_logs").insert({
     actor_user_id: uid,
     module: input.module,
     action: input.action,

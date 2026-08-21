@@ -49,7 +49,12 @@ export const emailAccountCount = async (email: string): Promise<number> => {
 export const registerEmailAccount = async (email: string, uid: string) => {
   const key = email.toLowerCase().trim();
 
-  // Get existing count first
+  // TODO: This read-then-upsert is non-atomic. Under concurrent signups with the
+  // same email, two requests may both read count=2 and both write count=3, allowing
+  // a 4th account to bypass the MAX_ACCOUNTS_PER_EMAIL limit. Ideally this should
+  // use a server-side RPC with: UPDATE email_accounts SET count = count + 1
+  // WHERE id = $key AND count < 3 RETURNING count. This is a known limitation
+  // until the RPC is deployed.
   const { data: existing } = await supabase
     .from("email_accounts")
     .select("count")

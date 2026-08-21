@@ -9,35 +9,53 @@ const ResetPassword = () => {
   const nav = useNavigate();
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
-  const [oobCode, setOobCode] = useState<string | null>(null);
   const [validCode, setValidCode] = useState<boolean | null>(null);
   const [success, setSuccess] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
-    // Supabase handles password reset via its own flow
-    // The hash fragment contains the access token after email link click
+    // Supabase handles password reset via its own flow.
+    // The hash fragment contains the access token after email link click.
+    // detectSessionInUrl: true in the client config picks up the recovery token
+    // and establishes a session asynchronously via onAuthStateChange.
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const accessToken = hashParams.get("access_token");
     const type = hashParams.get("type");
+
     if (type === "recovery" && accessToken) {
-      setOobCode(accessToken);
       setValidCode(true);
     } else {
       // Fallback: check query params
       const params = new URLSearchParams(window.location.search);
       const code = params.get("oobCode") || params.get("code");
       if (code) {
-        setOobCode(code);
         setValidCode(true);
       } else {
         setValidCode(false);
       }
     }
+
+    // Guard: wait for the recovery session to be established before allowing submit.
+    // supabase.auth.onAuthStateChange fires once the recovery token is processed.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setSessionReady(true);
+      }
+    });
+
+    // Also check if session is already active (e.g., page refresh)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setSessionReady(true);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!oobCode || password.length < 6) return;
+    if (!sessionReady || password.length < 6) return;
     
     setBusy(true);
     try {
@@ -54,7 +72,7 @@ const ResetPassword = () => {
     }
   };
 
-  if (oobCode && validCode === false) {
+  if (validCode === false) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
         <div className="text-center max-w-sm">
@@ -92,7 +110,9 @@ const ResetPassword = () => {
             <p className="text-sm text-zinc-400">
               {success 
                 ? "Your password has been reset. Redirecting..."
-                : "Choose a strong new password"
+                : sessionReady
+                  ? "Choose a strong new password"
+                  : "Verifying your reset link..."
               }
             </p>
           </div>
@@ -111,16 +131,17 @@ const ResetPassword = () => {
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   placeholder="New password"
-                  className="w-full bg-[#121212] border border-white/10 rounded-md pl-4 pr-4 py-3 text-[14px] outline-none focus:border-white/20 transition-all placeholder:text-zinc-500"
+                  disabled={!sessionReady}
+                  className="w-full bg-[#121212] border border-white/10 rounded-md pl-4 pr-4 py-3 text-[14px] outline-none focus:border-white/20 transition-all placeholder:text-zinc-500 disabled:opacity-50"
                 />
               </div>
 
               <button 
                 type="submit"
-                disabled={busy || password.length < 6 || !validCode}
+                disabled={busy || password.length < 6 || !sessionReady}
                 className="w-full bg-[#0095F6] hover:bg-[#1877F2] text-white font-semibold py-2 rounded-lg transition-all active:opacity-70 disabled:opacity-50 text-sm"
               >
-                {busy ? "Updating..." : "Reset Password"}
+                {!sessionReady ? "Verifying..." : busy ? "Updating..." : "Reset Password"}
               </button>
             </form>
           )}

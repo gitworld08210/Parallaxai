@@ -42,7 +42,7 @@ export default function LiveHost() {
   useEffect(() => {
     (async () => {
       try {
-        const { data } = await supabase.from('gift_catalog' as any).select('*');
+        const { data } = await supabase.from('gift_catalog').select('*');
         const map: Record<string, { icon: string; name: string }> = {};
         (data as any[] || []).forEach((d: any) => {
           map[d.id] = { icon: d.icon, name: d.name };
@@ -120,7 +120,7 @@ export default function LiveHost() {
 
       // 2) Create the stream record
       const roomName = `live_${user.id}_${Date.now()}`;
-      const { data: streamDoc, error: streamErr } = await supabase.from('live_streams' as any).insert({
+      const { data: streamDoc, error: streamErr } = await supabase.from('live_streams').insert({
         host_id: user.id,
         title: title || null,
         status: "live",
@@ -172,7 +172,7 @@ export default function LiveHost() {
     try {
       stopLocalTracks();
       if (streamId) {
-        await supabase.from('live_streams' as any).update({
+        await supabase.from('live_streams').update({
           status: "ended",
           ended_at: new Date().toISOString(),
         } as any).eq('id', streamId);
@@ -189,7 +189,7 @@ export default function LiveHost() {
 
     // Initial chat fetch
     (async () => {
-      const { data } = await supabase.from('live_chat' as any).select('*').eq('stream_id', streamId).order('created_at', { ascending: true }).limit(100);
+      const { data } = await supabase.from('live_chat').select('*').eq('stream_id', streamId).order('created_at', { ascending: true }).limit(100);
       if (data) setChat((data as any[]).slice(-50));
     })();
 
@@ -202,7 +202,7 @@ export default function LiveHost() {
 
     // Initial gifts fetch
     (async () => {
-      const { data } = await supabase.from('live_gifts' as any).select('*').eq('stream_id', streamId).order('created_at', { ascending: false }).limit(20);
+      const { data } = await supabase.from('live_gifts').select('*').eq('stream_id', streamId).order('created_at', { ascending: false }).limit(20);
       if (data) {
         const allGifts = data as any[];
         setRecentGifts(allGifts.slice(0, 6));

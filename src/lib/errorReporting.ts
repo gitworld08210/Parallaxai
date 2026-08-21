@@ -35,7 +35,7 @@ export function reportError(error: Error, context?: ErrorContext): void {
   }
 
   try {
-    supabase.from('error_logs' as any).insert({
+    supabase.from('error_logs').insert({
       message: error.message || String(error),
       stack: error.stack || null,
       user_id: context?.userId || null,

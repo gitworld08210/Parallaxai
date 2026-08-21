@@ -167,7 +167,7 @@ const Compose = () => {
         }
       }
       const { media_url, media_type } = await uploadMedia();
-      const { data: insertedDoc, error: insertErr } = await supabase.from('posts' as any).insert({
+      const { data: insertedDoc, error: insertErr } = await supabase.from('posts').insert({
         user_id: user.id,
         content: content.trim(),
         media_url,

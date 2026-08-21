@@ -31,9 +31,9 @@ const ApprovalsInbox = () => {
     // Initial fetch
     const fetchData = async () => {
       const [topupRes, verifRes, kycRes] = await Promise.all([
-        supabase.from('coin_topups' as any).select('*').order('created_at', { ascending: false }),
-        supabase.from('verification_requests' as any).select('*').order('created_at', { ascending: false }),
-        supabase.from('virtual_world_applications' as any).select('*').order('created_at', { ascending: false }),
+        supabase.from('coin_topups').select('*').order('created_at', { ascending: false }),
+        supabase.from('verification_requests').select('*').order('created_at', { ascending: false }),
+        supabase.from('virtual_world_applications').select('*').order('created_at', { ascending: false }),
       ]);
       if (topupRes.data) setTopups(topupRes.data as any[]);
       if (verifRes.data) setVerifications(verifRes.data as any[]);
@@ -89,11 +89,11 @@ const ApprovalsInbox = () => {
   const handleApproveTopup = async (topup: any) => {
     try {
       // 1. Update topup status
-      const { error: topupErr } = await supabase.from('coin_topups' as any).update({
+      const { error: topupErr } = await supabase.from('coin_topups').update({
         status: 'approved',
         approved_at: new Date().toISOString(),
         reviewer_id: user?.id,
-      } as any).eq('id', topup.id);
+      }).eq('id', topup.id);
       if (topupErr) throw topupErr;
 
       // 2. Get current balance
@@ -114,15 +114,14 @@ const ApprovalsInbox = () => {
       if (profileErr) throw profileErr;
 
       // 4. Add to ledger
-      await supabase.from('ledger' as any).insert({
+      await supabase.from('ledger').insert({
         user_id: topup.user_id,
-        type: 'credit',
+        kind: 'credit',
         amount: topup.coins,
-        source: 'topup',
+        balance_after: currentBalance + topup.coins,
         reference_id: topup.id,
-        label: 'Coin Purchase Approved',
         created_at: new Date().toISOString(),
-      } as any);
+      });
 
       toast.success(`Approved ${topup.coins} coins for user`);
     } catch (e: any) {
@@ -147,7 +146,7 @@ const ApprovalsInbox = () => {
   const handleApproveKyc = async (req: any) => {
     try {
       // 1. Update application status
-      const { error: reqErr } = await supabase.from('virtual_world_applications' as any).update({
+      const { error: reqErr } = await supabase.from('virtual_world_applications').update({
         status: 'approved',
         approved_at: new Date().toISOString(),
         reviewer_id: user?.id,
@@ -155,7 +154,7 @@ const ApprovalsInbox = () => {
       if (reqErr) throw reqErr;
 
       // 2. Grant access
-      await supabase.from('virtual_world_access' as any).upsert({
+      await supabase.from('virtual_world_access').upsert({
         user_id: req.user_id,
         is_active: true,
         daily_limit: 25,

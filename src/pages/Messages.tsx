@@ -68,7 +68,7 @@ const Messages = () => {
     setLoading(true);
     
     const { data } = await supabase
-      .from('conversations' as any)
+      .from('conversations')
       .select('*')
       .contains('member_ids', [user.id])
       .order('last_message_at', { ascending: false });
@@ -148,7 +148,7 @@ const Messages = () => {
     try {
       // Check if conversation already exists
       const { data: existingConvs } = await supabase
-        .from('conversations' as any)
+        .from('conversations')
         .select('*')
         .eq('is_group', false)
         .contains('member_ids', [user.id]);
@@ -163,7 +163,7 @@ const Messages = () => {
       }
 
       // Create new DM
-      const { data: newConv, error } = await supabase.from('conversations' as any).insert({
+      const { data: newConv, error } = await supabase.from('conversations').insert({
         member_ids: [user.uid, otherId],
         is_group: false,
         created_at: new Date().toISOString(),

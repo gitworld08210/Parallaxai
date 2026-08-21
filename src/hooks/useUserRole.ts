@@ -21,7 +21,7 @@ export const useUserRole = () => {
     (async () => {
       try {
         const { data } = await supabase
-          .from('profiles' as any)
+          .from('profiles')
           .select('is_admin, is_moderator')
           .eq('user_id', user.id)
           .maybeSingle();

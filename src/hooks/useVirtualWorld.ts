@@ -56,9 +56,9 @@ export const useVirtualWorld = () => {
     try {
       const { supabase } = await import("@/integrations/supabase/client");
       
-      const { data: appData } = await supabase.from('virtual_world_applications' as any).select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1);
-      const { data: accessData } = await supabase.from('virtual_world_access' as any).select('*').eq('user_id', user.id).limit(1);
-      const { data: logsData } = await supabase.from('virtual_world_logs' as any).select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(30);
+      const { data: appData } = await supabase.from('virtual_world_applications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(1);
+      const { data: accessData } = await supabase.from('virtual_world_access').select('*').eq('user_id', user.id).limit(1);
+      const { data: logsData } = await supabase.from('virtual_world_logs').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(30);
       
       setApplication((appData as any[] || []).length > 0 ? (appData as any[])[0] as VwApplication : null);
       setAccess((accessData as any[] || []).length > 0 ? (accessData as any[])[0] as VwAccess : null);

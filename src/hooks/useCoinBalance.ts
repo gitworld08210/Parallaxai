@@ -12,7 +12,7 @@ export function useCoinBalance() {
     
     try {
       const { data } = await supabase
-        .from('wallets' as any)
+        .from('wallets')
         .select('total')
         .eq('user_id', user.id)
         .maybeSingle();

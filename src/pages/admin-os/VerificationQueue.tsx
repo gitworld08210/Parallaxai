@@ -18,7 +18,7 @@ const VerificationQueue = () => {
     // Initial fetch
     const fetchRequests = async () => {
       const { data } = await supabase
-        .from('verification_requests' as any)
+        .from('verification_requests')
         .select('*')
         .order('created_at', { ascending: false });
       if (data) setRequests(data as any[]);
@@ -47,7 +47,7 @@ const VerificationQueue = () => {
   const handleAction = async (req: any, status: 'approved' | 'rejected') => {
     try {
       // Update verification request
-      const { error: reqErr } = await supabase.from('verification_requests' as any).update({
+      const { error: reqErr } = await supabase.from('verification_requests').update({
         status,
         reviewed_at: new Date().toISOString(),
         reviewer_id: user?.id,

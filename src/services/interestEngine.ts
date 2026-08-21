@@ -51,7 +51,7 @@ export async function updateInterestVector(
 ): Promise<void> {
   // Fetch current value
   const { data: existing } = await supabase
-    .from("user_interests" as any)
+    .from("user_interests")
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
@@ -60,7 +60,7 @@ export async function updateInterestVector(
   const scores = current.scores || {};
   scores[topic] = (scores[topic] || 0) + delta;
 
-  await supabase.from("user_interests" as any).upsert({
+  await supabase.from("user_interests").upsert({
     user_id: userId,
     scores,
   } as any);
@@ -71,7 +71,7 @@ export async function updateInterestVector(
  */
 export async function getInterestVector(userId: string): Promise<InterestVector> {
   const { data } = await supabase
-    .from("user_interests" as any)
+    .from("user_interests")
     .select("scores")
     .eq("user_id", userId)
     .maybeSingle();

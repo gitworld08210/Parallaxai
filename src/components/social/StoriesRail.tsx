@@ -35,7 +35,7 @@ export const StoriesRail = () => {
     
     try {
       const { data, error } = await supabase
-        .from('stories' as any)
+        .from('stories')
         .select('*')
         .gt('expires_at', new Date().toISOString())
         .order('created_at', { ascending: true });

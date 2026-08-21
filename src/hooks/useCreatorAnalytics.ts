@@ -82,7 +82,7 @@ export function useCreatorAnalytics(period: Period): AnalyticsData {
       try {
         // Fetch posts
         const { data: postsData } = await supabase
-          .from('posts' as any)
+          .from('posts')
           .select('*')
           .eq('user_id', user!.id)
           .order('created_at', { ascending: false })
@@ -102,7 +102,7 @@ export function useCreatorAnalytics(period: Period): AnalyticsData {
 
         // Fetch follows (new followers in period)
         const { data: followsData } = await supabase
-          .from('follows' as any)
+          .from('follows')
           .select('*')
           .eq('following_id', user!.id)
           .gte('created_at', startDateISO)
@@ -116,7 +116,7 @@ export function useCreatorAnalytics(period: Period): AnalyticsData {
 
         // Fetch tip transactions (earnings)
         const { data: txData } = await supabase
-          .from('transactions' as any)
+          .from('transactions')
           .select('*')
           .eq('recipient_id', user!.id)
           .eq('type', 'tip')

@@ -29,14 +29,14 @@ const Drafts = () => {
     setLoading(true);
     try {
       const { data: draftsData } = await supabase
-        .from('posts' as any)
+        .from('posts')
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'draft')
         .order('created_at', { ascending: false });
 
       const { data: scheduledData } = await supabase
-        .from('posts' as any)
+        .from('posts')
         .select('*')
         .eq('user_id', user.id)
         .eq('status', 'scheduled')
@@ -83,7 +83,7 @@ const Drafts = () => {
 
   const publishNow = async (id: string) => {
     try {
-      await supabase.from('posts' as any).update({ status: "published", scheduled_for: null } as any).eq('id', id);
+      await supabase.from('posts').update({ status: "published", scheduled_for: null }).eq('id', id);
       toast.success("Published");
       load();
     } catch (e: any) {
@@ -94,7 +94,7 @@ const Drafts = () => {
   const remove = async (id: string) => {
     if (!confirm("Delete this draft?")) return;
     try {
-      await supabase.from('posts' as any).delete().eq('id', id);
+      await supabase.from('posts').delete().eq('id', id);
       setItems((arr) => arr.filter((i) => i.id !== id));
     } catch (e: any) {
       toast.error(e.message || "Failed to delete");

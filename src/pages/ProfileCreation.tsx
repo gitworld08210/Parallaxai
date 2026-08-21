@@ -92,7 +92,7 @@ const ProfileCreation = () => {
 
       // Username index is best-effort
       try {
-        await supabase.from('usernames' as any).upsert({
+        await supabase.from('usernames').upsert({
           username: finalUsername,
           user_id: user.uid,
           uid: user.uid,

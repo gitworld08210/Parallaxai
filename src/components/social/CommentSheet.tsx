@@ -27,7 +27,7 @@ export const CommentSheet = ({ postId, open, onOpenChange }: { postId: string | 
     // Initial fetch
     const fetchComments = async () => {
       const { data } = await supabase
-        .from('comments' as any)
+        .from('comments')
         .select('*')
         .eq('post_id', postId)
         .order('created_at', { ascending: true })
@@ -62,7 +62,7 @@ export const CommentSheet = ({ postId, open, onOpenChange }: { postId: string | 
     if (!user || !postId || !text.trim()) return;
     setLoading(true);
     try {
-      await supabase.from('comments' as any).insert({
+      await supabase.from('comments').insert({
         post_id: postId,
         user_id: user.id,
         content: text.trim(),
@@ -73,14 +73,17 @@ export const CommentSheet = ({ postId, open, onOpenChange }: { postId: string | 
           avatar_url: user.user_metadata?.avatar_url || null
         }
       });
-      // Update post comment count
+      // TODO: comment_count increment uses a stale client-side value. Under concurrency,
+      // simultaneous comments may both read the same count and write count+1, losing one.
+      // Ideally this should use a server-side RPC for atomic increment.
+      // This is a known limitation until the RPC is deployed.
       const { data: postData } = await supabase
-        .from('posts' as any)
+        .from('posts')
         .select('comment_count')
         .eq('id', postId)
         .single();
-      const currentCount = (postData as any)?.comment_count || 0;
-      await supabase.from('posts' as any).update({ comment_count: currentCount + 1 }).eq('id', postId);
+      const currentCount = postData?.comment_count || 0;
+      await supabase.from('posts').update({ comment_count: currentCount + 1 }).eq('id', postId);
       setText("");
     } catch (e: any) {
       toast.error(e.message || "Action failed");

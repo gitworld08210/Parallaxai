@@ -39,7 +39,7 @@ const Verification = () => {
     if (!user) return;
     (async () => {
       try {
-        const { data } = await supabase.from("verification_requests" as any).select("id, status, category, created_at").eq("user_id", user.id).maybeSingle();
+        const { data } = await supabase.from("verification_requests").select("id, status, category, created_at").eq("user_id", user.id).maybeSingle();
         setExisting((data as unknown as VR) ?? null);
       } catch (e) {
         console.warn("Verification fetch failed", e);
@@ -81,7 +81,7 @@ const Verification = () => {
         supporting_doc_url: supportPath,
       };
 
-      const { data: inserted, error } = await supabase.from("verification_requests" as any).insert({
+      const { data: inserted, error } = await supabase.from("verification_requests").insert({
         ...payload,
         created_at: new Date().toISOString(),
       } as any).select("id").maybeSingle();

@@ -18,7 +18,7 @@ const Notifications = () => {
     // Initial fetch
     const fetchNotifications = async () => {
       const { data } = await supabase
-        .from('notifications' as any)
+        .from('notifications')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -52,11 +52,11 @@ const Notifications = () => {
     if (!unread.length) return;
     
     const ids = unread.map(i => i.id);
-    await supabase.from('notifications' as any).update({ read: true } as any).in('id', ids);
+    await supabase.from('notifications').update({ read: true }).in('id', ids);
   };
 
   const markRead = async (id: string) => {
-    await supabase.from('notifications' as any).update({ read: true } as any).eq('id', id);
+    await supabase.from('notifications').update({ read: true }).eq('id', id);
   };
 
   const getIcon = (type: string) => {

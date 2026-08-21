@@ -16,7 +16,7 @@ export default function BlockedListScreen() {
 
   const load = async () => {
     if (!user) return;
-    const { data: bs } = await supabase.from("blocks" as any).select("blocked_id").eq("blocker_id", user.uid);
+    const { data: bs } = await supabase.from("blocks").select("blocked_id").eq("blocker_id", user.uid);
     const ids = (bs || []).map((b: any) => b.blocked_id);
     if (!ids.length) return setRows([]);
     const { data: profs } = await supabase.from("profiles").select("*").in("user_id", ids);
@@ -27,7 +27,7 @@ export default function BlockedListScreen() {
 
   const unblock = async (id: string) => {
     if (!user) return;
-    const { error } = await supabase.from("blocks" as any).delete().eq("blocker_id", user.uid).eq("blocked_id", id);
+    const { error } = await supabase.from("blocks").delete().eq("blocker_id", user.uid).eq("blocked_id", id);
     if (error) return toast.error(error.message);
     toast.success("Unblocked");
     setRows((r) => r.filter((x) => x.user_id !== id));

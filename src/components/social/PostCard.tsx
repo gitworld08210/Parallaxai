@@ -86,7 +86,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
       try {
         const saveId = `${user.id}_${post.id}`;
         const { data } = await supabase
-          .from('saves' as any)
+          .from('saves')
           .select('id')
           .eq('id', saveId)
           .maybeSingle();
@@ -109,11 +109,15 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
       for (const e of entries) {
         if (e.isIntersecting && e.intersectionRatio >= 0.6 && !viewedThisSession.has(post.id)) {
           viewedThisSession.add(post.id);
-          // Increment views in Supabase
+          // TODO: view_count increment uses a stale client-side value. Under concurrency,
+          // two viewers reading the same count will both write count+1, losing one increment.
+          // Ideally this should use a server-side RPC: supabase.rpc('increment_view_count', { post_id: post.id })
+          // This is a known limitation until the RPC is deployed.
           try {
+            const currentViewCount = (post as any).view_count ?? 0;
             supabase
-              .from('posts' as any)
-              .update({ view_count: (post as any).view_count ? (post as any).view_count + 1 : 1 })
+              .from('posts')
+              .update({ view_count: currentViewCount + 1 })
               .eq('id', post.id)
               .then(() => {});
           } catch(e) {}
@@ -134,16 +138,16 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
       const likeId = `${user.id}_${post.id}`;
 
       if (next) {
-        await supabase.from('likes' as any).insert({
+        await supabase.from('likes').insert({
           id: likeId,
           user_id: user.id,
           post_id: post.id,
           created_at: new Date().toISOString(),
         });
-        await supabase.from('posts' as any).update({ like_count: likes + 1 }).eq('id', post.id);
+        await supabase.from('posts').update({ like_count: likes + 1 }).eq('id', post.id);
       } else {
-        await supabase.from('likes' as any).delete().eq('id', likeId);
-        await supabase.from('posts' as any).update({ like_count: likes - 1 }).eq('id', post.id);
+        await supabase.from('likes').delete().eq('id', likeId);
+        await supabase.from('posts').update({ like_count: likes - 1 }).eq('id', post.id);
       }
     } catch (error: any) {
       console.error("Error toggling like:", error);
@@ -159,7 +163,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
     try {
       const saveId = `${user.id}_${post.id}`;
       if (next) {
-        await supabase.from('saves' as any).insert({
+        await supabase.from('saves').insert({
           id: saveId,
           user_id: user.id,
           post_id: post.id,
@@ -167,7 +171,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
         });
         toast.success("Saved");
       } else {
-        await supabase.from('saves' as any).delete().eq('id', saveId);
+        await supabase.from('saves').delete().eq('id', saveId);
       }
     } catch (error: any) {
       console.error("Error toggling save:", error);
@@ -188,7 +192,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
   const remove = async () => {
     if (!confirm("Delete this post?")) return;
     try {
-      await supabase.from('posts' as any).delete().eq('id', post.id);
+      await supabase.from('posts').delete().eq('id', post.id);
       toast.success("Deleted");
     } catch (error: any) {
       toast.error(error.message);
