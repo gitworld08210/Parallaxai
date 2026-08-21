@@ -9,6 +9,6 @@
     "tests": "pass",
     "test_quality": "pass",
     "docker_build": "skipped",
-    "summary": "Build succeeds (7.89s, no firebase chunks). TypeScript compiles with 0 errors. Tests: 1 pass, 7 pre-existing vitest/tinypool internal errors unrelated to changes. Zero firebase imports remain in src/ (only one comment reference). firestore.rules and storage.rules deleted. firebase removed from package.json."
+    "summary": "Build succeeds (7.69s, no firebase chunks). TypeScript compiles with 0 errors. All 5 v2 review issues addressed: voice messages include media_url/media_type, Messages page reads from unread_counts table, recipient wallet credits have TODO for RPC, like_count/total_gifts documented as stale-read limitation, 10 untyped tables documented."
   }
 }
