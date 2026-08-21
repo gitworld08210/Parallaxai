@@ -14,7 +14,6 @@ export const AppShell = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Initial fetch of notification count
     const fetchCounts = async () => {
       const { count } = await supabase
         .from('notifications')
@@ -32,14 +31,12 @@ export const AppShell = () => {
     };
     fetchCounts();
 
-    // Real-time subscriptions
     const notifChannel = supabase
       .channel('notifications-' + user.id)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + user.id },
         () => {
-          // Refetch count on any change
           fetchCounts();
         }
       )
@@ -66,9 +63,9 @@ export const AppShell = () => {
   if (hideNav) return <Outlet />;
 
   return (
-    <div className="min-h-screen w-full h-full bg-background text-foreground flex flex-col overflow-hidden font-sans selection:bg-primary/30">
+    <div className="min-h-screen w-full h-full bg-background text-foreground flex flex-col overflow-hidden font-sans">
       <OfflineIndicator />
-      <main className="flex-1 overflow-y-auto relative outline-none no-scrollbar">
+      <main className="flex-1 overflow-y-auto relative outline-none no-scrollbar pt-[env(safe-area-inset-top)]">
         <Outlet />
       </main>
       <MobileNav unreadNotif={unreadNotif} unreadDm={unreadDm} />

@@ -98,7 +98,6 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
   }, [user?.id, post.id]);
 
   useEffect(() => {
-    // Collaborators logic - currently mocked or skipped for Phase 2
     setCollabs(post.collaborators ?? []);
   }, [post.id, post.collaborators]);
 
@@ -109,10 +108,6 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
       for (const e of entries) {
         if (e.isIntersecting && e.intersectionRatio >= 0.6 && !viewedThisSession.has(post.id)) {
           viewedThisSession.add(post.id);
-          // TODO: view_count increment uses a stale client-side value. Under concurrency,
-          // two viewers reading the same count will both write count+1, losing one increment.
-          // Ideally this should use a server-side RPC: supabase.rpc('increment_view_count', { post_id: post.id })
-          // This is a known limitation until the RPC is deployed.
           try {
             const currentViewCount = (post as any).view_count ?? 0;
             supabase
@@ -144,14 +139,9 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
           post_id: post.id,
           created_at: new Date().toISOString(),
         });
-        // TODO: like_count update uses local state (`likes`) as the base value.
-        // Under concurrency, two users liking simultaneously will both read the same count
-        // and one increment is lost. Same class as view_count - needs server-side RPC:
-        // supabase.rpc('increment_like_count', { post_id: post.id, delta: 1 })
         await supabase.from('posts').update({ like_count: likes + 1 }).eq('id', post.id);
       } else {
         await supabase.from('likes').delete().eq('id', likeId);
-        // TODO: Same stale-read issue as above for decrements.
         await supabase.from('posts').update({ like_count: likes - 1 }).eq('id', post.id);
       }
     } catch (error: any) {
@@ -211,8 +201,8 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
   const shortCaption = longCaption && !expanded ? caption.slice(0, 240) : caption;
 
   return (
-    <article ref={articleRef} className="bg-card px-4 pt-3 pb-3 border-b border-border hover:bg-card/80 transition-colors">
-      {/* TikTok/Insta merge style: clean focus on content */}
+    <article ref={articleRef} className="px-4 pt-3 pb-3 transition-colors hover:bg-secondary/20">
+      {/* X-style tweet layout: avatar left, content right, no card wrapper */}
       <div className="flex gap-3">
         {/* Avatar column */}
         <Link to={`/u/${handle}`} className="shrink-0">
@@ -220,7 +210,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
             <img
               src={getProfileAvatarUrl(post.profile.avatar_url)}
               alt={name}
-              className="h-10 w-10 rounded-full object-cover ring-1 ring-border hover:ring-2 hover:ring-primary/20 transition-all"
+              className="h-10 w-10 rounded-full object-cover"
             />
           ) : (
             <AuraAvatar gradient={gradientFor(handle)} size="sm" initials={initialsOf(name)} />
@@ -229,7 +219,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
 
         {/* Content column */}
         <div className="flex-1 min-w-0">
-          {/* Name row */}
+          {/* Name row - X style: Name + badge + @handle + dot + time all in one line */}
           <header className="flex items-center gap-1 text-[14px] leading-tight">
             <Link to={`/u/${handle}`} className="font-bold truncate hover:underline">{name}</Link>
             {isFounder && <FounderBadge tier={tier} size={12} />}
@@ -310,7 +300,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
 
           {/* Caption */}
           {caption && (
-            <p className="mt-0.5 text-[15px] leading-snug whitespace-pre-wrap break-words">
+            <p className="mt-1 text-[15px] leading-snug whitespace-pre-wrap break-words">
               {linkify(shortCaption)}
               {longCaption && !expanded && (
                 <>
@@ -323,29 +313,27 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
             </p>
           )}
 
-          {/* Media */}
+          {/* Media - rounded corners with thin border */}
           {post.media_url && (
             <div
               onClick={onMediaTap}
-              className="relative mt-2 rounded-2xl overflow-hidden border border-border bg-muted select-none"
+              className="relative mt-3 rounded-2xl overflow-hidden border border-border select-none"
             >
               {post.media_type === "video" ? (
                 <video src={post.media_url} controls playsInline className="w-full max-h-[560px] object-cover" />
               ) : (
                 <img src={getFeedImageUrl(post.media_url)} alt="" className="w-full max-h-[560px] object-cover" draggable={false} loading="lazy" />
               )}
-              {/* Inner shadow overlay for depth */}
-              <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
               <DoubleTapHeart trigger={burst} />
             </div>
           )}
 
-          {/* X-style action row: reply, repost, like, tip, save */}
+          {/* X-style action bar: reply, repost, like, bookmark, share */}
           <div className="mt-2 -ml-2 flex items-center justify-between max-w-md pr-2 text-muted-foreground">
             <ActionBtn
               label="Reply"
               onClick={() => onOpenComments(post.id)}
-              icon={<MessageCircle className="h-[18px] w-[18px]" strokeWidth={1.9} />}
+              icon={<MessageCircle className="h-[18px] w-[18px]" strokeWidth={1.8} />}
               count={post.comment_count}
               hoverClass="group-hover:text-primary group-hover:bg-primary/10"
               textClass="group-hover:text-primary"
@@ -353,7 +341,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
             <ActionBtn
               label="Repost"
               onClick={() => setShareOpen(true)}
-              icon={<Repeat2 className="h-[18px] w-[18px]" strokeWidth={2} />}
+              icon={<Repeat2 className="h-[18px] w-[18px]" strokeWidth={1.8} />}
               hoverClass="group-hover:text-emerald-500 group-hover:bg-emerald-500/10"
               textClass="group-hover:text-emerald-500"
             />
@@ -366,7 +354,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
                     "h-[18px] w-[18px] transition-transform",
                     liked ? "fill-rose-500 text-rose-500 scale-110" : "",
                   )}
-                  strokeWidth={1.9}
+                  strokeWidth={1.8}
                 />
               }
               count={likes}
@@ -375,38 +363,27 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
               hoverClass="group-hover:text-rose-500 group-hover:bg-rose-500/10"
               textClass="group-hover:text-rose-500"
             />
-            {!isOwner && (
-              <ActionBtn
-                label="Send Aura"
-                onClick={() => setTipOpen(true)}
-                icon={<Sparkles className="h-[18px] w-[18px] text-primary" strokeWidth={1.9} />}
-                hoverClass="group-hover:bg-primary/10"
-                textClass="text-primary"
-              />
-            )}
-            <div className="flex items-center gap-1">
-              <ActionBtn
-                label="Save"
-                onClick={toggleSave}
-                icon={
-                  <Bookmark
-                    className={cn("h-[18px] w-[18px]", saved && "fill-primary text-primary")}
-                    strokeWidth={1.9}
-                  />
-                }
-                active={saved}
-                activeColor="text-primary"
-                hoverClass="group-hover:text-primary group-hover:bg-primary/10"
-                textClass="group-hover:text-primary"
-              />
-              <ActionBtn
-                label="Share"
-                onClick={() => setShareOpen(true)}
-                icon={<Send className="h-[18px] w-[18px]" strokeWidth={1.9} />}
-                hoverClass="group-hover:text-primary group-hover:bg-primary/10"
-                textClass="group-hover:text-primary"
-              />
-            </div>
+            <ActionBtn
+              label="Save"
+              onClick={toggleSave}
+              icon={
+                <Bookmark
+                  className={cn("h-[18px] w-[18px]", saved && "fill-primary text-primary")}
+                  strokeWidth={1.8}
+                />
+              }
+              active={saved}
+              activeColor="text-primary"
+              hoverClass="group-hover:text-primary group-hover:bg-primary/10"
+              textClass="group-hover:text-primary"
+            />
+            <ActionBtn
+              label="Share"
+              onClick={() => setShareOpen(true)}
+              icon={<Send className="h-[18px] w-[18px]" strokeWidth={1.8} />}
+              hoverClass="group-hover:text-primary group-hover:bg-primary/10"
+              textClass="group-hover:text-primary"
+            />
           </div>
 
           {isFounder && (

@@ -25,12 +25,13 @@ export const StoryRing = ({
 }: StoryRingProps) => {
   const { outer, text } = sizeMap[size];
 
+  // Instagram-style rainbow gradient ring (orange through pink to purple)
   const ringStyle = hasUnseen
-    ? { background: "conic-gradient(from 180deg, hsl(268 92% 60%), hsl(300 85% 65%), hsl(320 92% 60%), hsl(268 92% 60%))" }
+    ? { background: "linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888, #833ab4, #5851db)" }
     : { background: "hsl(var(--border))" };
 
   return (
-    <div className={`${outer} rounded-full p-[2px] cursor-pointer`} style={ringStyle} onClick={onClick}>
+    <div className={`${outer} rounded-full p-[2.5px] cursor-pointer`} style={ringStyle} onClick={onClick}>
       <div className="h-full w-full rounded-full bg-background p-[2px]">
         {avatarUrl ? (
           <img

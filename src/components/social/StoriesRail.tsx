@@ -61,9 +61,11 @@ export const StoriesRail = () => {
 
   return (
     <>
-      <div className="px-3 py-4 flex gap-4 overflow-x-auto no-scrollbar border-b border-border">
+      {/* Instagram-style stories rail: 64px circles with gradient ring */}
+      <div className="px-3 py-4 flex gap-3 overflow-x-auto no-scrollbar">
+        {/* Your story - first item with + badge */}
         <Link to="/compose/story" className="flex flex-col items-center gap-1.5 shrink-0 w-[72px]">
-          <div className="relative h-[68px] w-[68px] rounded-full bg-muted grid place-items-center overflow-hidden border border-border">
+          <div className="relative h-16 w-16 rounded-full bg-muted grid place-items-center overflow-hidden border-2 border-border">
             {me?.avatar_url ? (
               <img src={me.avatar_url} className="h-full w-full object-cover" alt="" />
             ) : (
@@ -71,7 +73,7 @@ export const StoriesRail = () => {
                 {initialsOf(me?.display_name || me?.username || "Y")}
               </div>
             )}
-            <span className="absolute bottom-0 right-0 h-5 w-5 rounded-full bg-primary grid place-items-center ring-2 ring-background shadow-lg shadow-primary/30">
+            <span className="absolute bottom-0 right-0 h-5 w-5 rounded-full bg-primary grid place-items-center ring-2 ring-background">
               <Plus className="h-3 w-3 text-primary-foreground" strokeWidth={3} />
             </span>
           </div>

@@ -114,23 +114,18 @@ const Profile = () => {
         return;
       }
       
-      console.log("Resolving profile for:", target);
-      
       let p: any = null;
 
-      // 1. Try resolving by user_id
       {
         const { data } = await supabase.from('profiles').select('*').eq('user_id', target).maybeSingle();
         if (data) p = data;
       }
 
-      // 2. Try resolving by username
       if (!p) {
         const { data } = await supabase.from('profiles').select('*').eq('username', target).maybeSingle();
         if (data) p = data;
       }
 
-      // 3. Try resolving by username lowercase
       if (!p) {
         const { data } = await supabase.from('profiles').select('*').eq('username', target.toLowerCase()).maybeSingle();
         if (data) p = data;
@@ -314,9 +309,9 @@ const Profile = () => {
     return (
       <div className="pb-10">
         <div className="h-14 border-b border-border" />
-        <div className="h-44 sm:h-56 w-full bg-secondary/40 animate-pulse" />
+        <div className="h-44 sm:h-52 w-full bg-secondary animate-pulse" />
         <div className="px-4 -mt-14 space-y-3">
-          <div className="h-28 w-28 rounded-full bg-secondary animate-pulse ring-4 ring-background" />
+          <div className="h-24 w-24 rounded-full bg-secondary animate-pulse ring-4 ring-background" />
           <div className="h-6 w-40 rounded bg-secondary animate-pulse" />
           <div className="h-4 w-24 rounded bg-secondary animate-pulse" />
         </div>
@@ -330,13 +325,13 @@ const Profile = () => {
           <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
             <User className="h-10 w-10 text-primary" />
           </div>
-          <h2 className="text-2xl font-black mb-2">Complete your profile</h2>
-          <p className="text-zinc-500 text-sm mb-8 max-w-[280px]">
+          <h2 className="text-2xl font-bold mb-2">Complete your profile</h2>
+          <p className="text-muted-foreground text-sm mb-8 max-w-[280px]">
             You haven't finished setting up your profile yet. Let others know who you are!
           </p>
           <Link
             to="/profile-creation"
-            className="h-12 px-8 rounded-full bg-primary text-white font-bold flex items-center justify-center hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-primary/20"
+            className="h-12 px-8 rounded-full bg-primary text-white font-bold flex items-center justify-center active:scale-95 transition-transform shadow-elevated"
           >
             Setup Profile
           </Link>
@@ -346,10 +341,10 @@ const Profile = () => {
 
     return (
       <div className="pb-24">
-        <header className="sticky top-0 z-30 h-14 px-3 flex items-center gap-3 bg-background/85 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 border-b border-border">
+        <header className="sticky top-0 z-30 h-14 px-3 flex items-center gap-3 bg-background border-b border-border">
           <button
             onClick={() => nav(-1)}
-            className="p-2 -ml-2 rounded-full hover:bg-secondary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="p-2 -ml-2 rounded-full hover:bg-secondary transition-colors"
             aria-label="Back"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -385,60 +380,45 @@ const Profile = () => {
 
   return (
     <div className="pb-24">
-      {/* Top bar - glassmorphism */}
-      <header className="sticky top-0 z-30 h-14 px-4 flex items-center justify-between bg-background/85 backdrop-blur-xl border-b border-white/[0.05]">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => nav(-1)}
-            className="p-1 rounded-full hover:bg-secondary/60 transition-colors"
-            aria-label="Back"
-          >
-            <ArrowLeft className="h-6 w-6" />
-          </button>
-          <div className="min-w-0">
-            <p className="text-xl font-bold tracking-tight truncate">{displayName}</p>
-          </div>
+      {/* X-style top bar: back arrow + name + post count */}
+      <header className="sticky top-0 z-30 h-14 px-4 flex items-center gap-4 bg-background border-b border-border">
+        <button
+          onClick={() => nav(-1)}
+          className="p-1.5 -ml-1.5 rounded-full hover:bg-secondary transition-colors"
+          aria-label="Back"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <p className="text-lg font-bold tracking-tight truncate leading-tight">{displayName}</p>
+          <p className="text-xs text-muted-foreground leading-tight">{fmt(profile.posts_count ?? 0)} posts</p>
         </div>
-        <div className="flex items-center gap-3">
-          <SideMenu 
-            trigger={
-              <button className="h-8 w-8 rounded-full overflow-hidden ring-1 ring-white/10">
-                {profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <AuraAvatar gradient={gradientFor(profile.username)} initials={initialsOf(displayName)} />
-                )}
-              </button>
-            }
-          />
-          <IconBtn label="Share" onClick={shareProfile}>
-            <Share2 className="h-6 w-6" />
-          </IconBtn>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="p-1"><MoreHorizontal className="h-6 w-6" /></button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-[#111] border-white/10">
-              <DropdownMenuItem onClick={shareProfile} className="gap-2">
-                <Share2 className="h-4 w-4" /> Share profile
-              </DropdownMenuItem>
-              {!isMe && (
-                <>
-                  <DropdownMenuItem onClick={toggleMute} className="gap-2">
-                    <VolumeX className="h-4 w-4" /> {isMuted ? "Unmute" : "Mute"}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={toggleBlock} className="gap-2 text-rose-500 focus:text-rose-500">
-                    <Ban className="h-4 w-4" /> {isBlocked ? "Unblock" : "Block"}
-                  </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-1.5 rounded-full hover:bg-secondary transition-colors">
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={shareProfile} className="gap-2">
+              <Share2 className="h-4 w-4" /> Share profile
+            </DropdownMenuItem>
+            {!isMe && (
+              <>
+                <DropdownMenuItem onClick={toggleMute} className="gap-2">
+                  <VolumeX className="h-4 w-4" /> {isMuted ? "Unmute" : "Mute"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={toggleBlock} className="gap-2 text-rose-500 focus:text-rose-500">
+                  <Ban className="h-4 w-4" /> {isBlocked ? "Unblock" : "Block"}
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
 
-      {/* Cover - taller with gradient overlay */}
-      <div className="relative w-full h-44 sm:h-56 bg-secondary overflow-hidden group">
+      {/* Cover image - full width */}
+      <div className="relative w-full h-44 sm:h-52 bg-secondary overflow-hidden">
         <button
           type="button"
           onClick={() => profile.cover_url && setCoverPreviewOpen(true)}
@@ -455,16 +435,14 @@ const Profile = () => {
             />
           )}
         </button>
-        {/* Gradient overlay for text readability */}
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
         {isMe && (
           <Link
             to="/profile/edit"
             aria-label={profile.cover_url ? "Change banner" : "Add banner"}
-            className="absolute bottom-2 right-2 h-9 px-3 rounded-full bg-black/55 text-white text-xs font-semibold backdrop-blur-md inline-flex items-center gap-1.5 hover:bg-black/70 transition-colors active:scale-95"
+            className="absolute bottom-3 right-3 h-8 px-3 rounded-full bg-black/60 text-white text-xs font-semibold inline-flex items-center gap-1.5 active:scale-95 transition-transform"
           >
             <Camera className="h-3.5 w-3.5" />
-            {profile.cover_url ? "Edit banner" : "Add banner"}
+            {profile.cover_url ? "Edit" : "Add banner"}
           </Link>
         )}
       </div>
@@ -477,7 +455,7 @@ const Profile = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setCoverPreviewOpen(false)}
-            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm grid place-items-center p-4"
+            className="fixed inset-0 z-[100] bg-black/95 grid place-items-center p-4"
           >
             <button
               type="button"
@@ -500,69 +478,57 @@ const Profile = () => {
         )}
       </AnimatePresence>
 
-      {/* Header block */}
-      <div className="px-4 pt-4">
-        {/* Avatar + actions row */}
-        <div className="flex items-start justify-between">
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 24 }}
-            className="relative rounded-full ring-4 ring-background bg-background -mt-16 z-10 shadow-lg"
-          >
+      {/* Profile info block - X style */}
+      <div className="px-4">
+        {/* Avatar overlaps cover + action buttons row */}
+        <div className="flex items-end justify-between -mt-12">
+          <div className="relative rounded-full ring-4 ring-background bg-background z-10">
             {profile.avatar_url ? (
               <img
                 src={profile.avatar_url}
                 alt={displayName}
-                className="h-28 w-28 rounded-full object-cover"
+                className="h-24 w-24 rounded-full object-cover"
               />
             ) : (
               <div
-                className="h-28 w-28 rounded-full grid place-items-center text-2xl font-display font-semibold text-foreground"
+                className="h-24 w-24 rounded-full grid place-items-center text-xl font-bold text-foreground"
                 style={{ backgroundImage: gradientFor(profile.username) }}
               >
                 {initialsOf(displayName)}
               </div>
             )}
-            {profile.is_founder && (
-              <span aria-hidden className="absolute inset-0 rounded-full aura-ring pointer-events-none" />
-            )}
-          </motion.div>
+          </div>
 
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 pb-1">
             {isMe ? (
               <>
-                <IconBtn label="Share profile" onClick={shareProfile}>
-                  <Share2 className="h-4 w-4" />
-                </IconBtn>
                 {(profile as any)?.is_creator && (
                   <Link
                     to="/creator/studio"
-                    className="inline-flex items-center gap-1.5 h-11 px-4 rounded-2xl bg-gradient-primary text-primary-foreground text-sm font-semibold shadow-glow hover:brightness-110 active:scale-95 transition-all"
+                    className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-primary text-primary-foreground text-sm font-semibold active:scale-95 transition-transform"
                   >
                     <Sparkles className="h-4 w-4" /> Studio
                   </Link>
                 )}
                 <Link
                   to="/profile/edit"
-                  className="inline-flex items-center h-11 px-4 rounded-2xl border border-border bg-background text-sm font-semibold hover:bg-secondary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 duration-fast"
+                  className="inline-flex items-center h-9 px-4 rounded-full border border-border text-sm font-bold hover:bg-secondary transition-colors active:scale-95"
                 >
                   Edit profile
                 </Link>
               </>
             ) : (
               <>
-                <IconBtn label="More actions" asChild>
+                <button
+                  type="button"
+                  aria-label="More actions"
+                  className="grid place-items-center h-9 w-9 rounded-full border border-border hover:bg-secondary transition-colors active:scale-95"
+                >
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button
-                        aria-label="More actions"
-                        className="grid place-items-center h-11 w-11 rounded-2xl border border-border bg-background hover:bg-secondary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
-                      >
-                        <MoreHorizontal className="h-4 w-4" />
-                      </button>
+                      <span><MoreHorizontal className="h-4 w-4" /></span>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-52 rounded-2xl">
+                    <DropdownMenuContent align="end" className="w-52">
                       <DropdownMenuItem onClick={toggleMute} className="gap-2">
                         <VolumeX className="h-4 w-4" /> {isMuted ? "Unmute" : "Mute"} @{profile.username}
                       </DropdownMenuItem>
@@ -574,19 +540,21 @@ const Profile = () => {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </IconBtn>
-                <IconBtn label="Share profile" onClick={shareProfile}>
-                  <Share2 className="h-4 w-4" />
-                </IconBtn>
-                <IconBtn label="Message" onClick={openDM}>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Message"
+                  onClick={openDM}
+                  className="grid place-items-center h-9 w-9 rounded-full border border-border hover:bg-secondary transition-colors active:scale-95"
+                >
                   <MessageCircle className="h-4 w-4" />
-                </IconBtn>
+                </button>
                 <button
                   type="button"
                   onClick={toggleFollow}
                   aria-pressed={isFollowing}
                   className={cn(
-                    "inline-flex items-center gap-1.5 h-11 px-4 rounded-2xl text-sm font-semibold transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
+                    "inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-bold transition-all active:scale-95",
                     isFollowing
                       ? "bg-background text-foreground border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 group"
                       : "bg-foreground text-background hover:opacity-90",
@@ -611,50 +579,51 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Identity */}
-        <div className="mt-4 space-y-4">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-tight">
-              {displayName}
-            </h1>
-            {profile.verified && profile.verification_kind && (
-              <button
-                type="button"
-                onClick={() => setVerifyOpen(true)}
-                aria-label="View verification details"
-                className="inline-flex items-center justify-center rounded-full p-0.5 -m-0.5 hover:bg-primary/10 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90 duration-fast"
-              >
-                <VerificationBadge kind={profile.verification_kind} className="h-5 w-5" />
-              </button>
-            )}
-            {/* Affiliation chip */}
-            {memberships.filter((m) => m.verified).slice(0, 1).map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setVerifyOpen(true)}
-                aria-label={`Affiliated with ${m.name}`}
-                title={`Affiliated with ${m.name}`}
-                className="inline-flex items-center justify-center h-6 w-6 rounded-md border border-border bg-secondary/60 hover:bg-secondary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-90 duration-fast overflow-hidden ml-0.5"
-              >
-                {m.logo_url ? (
-                  <img src={m.logo_url} alt="" className="h-full w-full object-cover" />
-                ) : (
-                  <span className="text-[10px] font-bold">{m.name.slice(0, 1)}</span>
-                )}
-              </button>
-            ))}
+        {/* Identity - X style: Name + verified, @handle on next line, bio, meta info */}
+        <div className="mt-3 space-y-2">
+          <div>
+            <div className="flex items-center gap-1 flex-wrap">
+              <h1 className="text-xl font-extrabold tracking-tight leading-tight">
+                {displayName}
+              </h1>
+              {profile.verified && profile.verification_kind && (
+                <button
+                  type="button"
+                  onClick={() => setVerifyOpen(true)}
+                  aria-label="View verification details"
+                  className="inline-flex"
+                >
+                  <VerificationBadge kind={profile.verification_kind} className="h-5 w-5" />
+                </button>
+              )}
+              {memberships.filter((m) => m.verified).slice(0, 1).map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => setVerifyOpen(true)}
+                  aria-label={`Affiliated with ${m.name}`}
+                  className="inline-flex items-center justify-center h-5 w-5 rounded-md border border-border bg-secondary overflow-hidden ml-0.5"
+                >
+                  {m.logo_url ? (
+                    <img src={m.logo_url} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-[9px] font-bold">{m.name.slice(0, 1)}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <p className="text-[15px] text-muted-foreground">@{profile.username}</p>
           </div>
-          <p className="text-sm text-muted-foreground -mt-2">@{profile.username}</p>
 
           {profile.bio && (
-            <p className="text-base leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+            <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
           )}
 
+          {/* Location, link, calendar - X style inline */}
           {(locationRaw || websiteHref || joined) && (
             <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
               {locationRaw && (
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
                   {locationRaw}
                 </span>
@@ -664,14 +633,14 @@ const Profile = () => {
                   href={websiteHref}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="inline-flex items-center gap-1.5 text-primary hover:underline"
+                  className="inline-flex items-center gap-1 text-primary hover:underline"
                 >
                   <LinkIcon className="h-3.5 w-3.5" />
                   {websiteLabel}
                 </a>
               )}
               {joined && (
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1">
                   <CalendarDays className="h-3.5 w-3.5" />
                   Joined {joined}
                 </span>
@@ -679,9 +648,21 @@ const Profile = () => {
             </div>
           )}
 
+          {/* Stats - X style: Following (count) Followers (count) in one line */}
+          <div className="flex items-center gap-4 text-[14px]">
+            <Link to={`/u/${profile.username}/following`} className="hover:underline">
+              <span className="font-bold text-foreground">{fmt(profile.following_count ?? 0)}</span>
+              <span className="text-muted-foreground ml-1">Following</span>
+            </Link>
+            <Link to={`/u/${profile.username}/followers`} className="hover:underline">
+              <span className="font-bold text-foreground">{fmt(profile.followers_count ?? 0)}</span>
+              <span className="text-muted-foreground ml-1">Followers</span>
+            </Link>
+          </div>
+
           {/* Affiliated organizations */}
           {memberships.length > 0 && (
-            <div>
+            <div className="pt-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground pb-1.5">
                 Affiliated with ({memberships.length})
               </p>
@@ -693,70 +674,30 @@ const Profile = () => {
             </div>
           )}
 
-          {/* Stats row - larger numbers with visual hierarchy and dividers */}
-          <div className="flex items-center gap-0 pt-2 overflow-x-auto no-scrollbar">
-            <Link to={`/u/${profile.username}/followers`} className="hover:underline pr-5 min-w-0 shrink-0">
-              <span className="text-lg font-bold text-foreground block leading-tight">{fmt(profile.followers_count ?? 0)}</span>
-              <span className="text-xs text-muted-foreground">Followers</span>
-            </Link>
-            <div className="h-8 w-px bg-border shrink-0" />
-            <Link to={`/u/${profile.username}/following`} className="hover:underline px-5 min-w-0 shrink-0">
-              <span className="text-lg font-bold text-foreground block leading-tight">{fmt(profile.following_count ?? 0)}</span>
-              <span className="text-xs text-muted-foreground">Following</span>
-            </Link>
-            <div className="h-8 w-px bg-border shrink-0" />
-            <button onClick={() => setTab("posts")} className="hover:underline px-5 min-w-0 shrink-0">
-              <span className="text-lg font-bold text-foreground block leading-tight">{fmt(profile.posts_count ?? 0)}</span>
-              <span className="text-xs text-muted-foreground">Posts</span>
-            </button>
-            <div className="h-8 w-px bg-border shrink-0" />
-            <button onClick={() => setTab("organizations")} className="hover:underline pl-5 min-w-0 shrink-0">
-              <span className="text-lg font-bold text-foreground block leading-tight">{fmt(memberships.length)}</span>
-              <span className="text-xs text-muted-foreground">Orgs</span>
-            </button>
-          </div>
-
           {/* Primary CTA */}
-          <div className="pt-3">
-            {isMe && !(me as any)?.is_creator ? (
-              <button
-                type="button"
-                onClick={() => setBecomeOpen(true)}
-                className="w-full h-11 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:brightness-110 transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
-              >
-                Become a creator
-              </button>
-            ) : isMe ? (
-              <Link
-                to="/profile/edit"
-                className="w-full h-11 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:brightness-110 transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] inline-flex items-center justify-center"
-              >
-                Edit profile
-              </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={isFollowing ? openDM : toggleFollow}
-                className="w-full h-11 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:brightness-110 transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
-              >
-                {isFollowing ? "Send a message" : `Follow @${profile.username}`}
-              </button>
-            )}
-          </div>
+          {isMe && !(me as any)?.is_creator && (
+            <button
+              type="button"
+              onClick={() => setBecomeOpen(true)}
+              className="w-full h-10 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-elevated active:scale-[0.98] transition-transform"
+            >
+              Become a creator
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Sticky tabs */}
-      <div className="max-w-3xl mx-auto mt-4">
+      {/* Sticky tabs - X style with underline */}
+      <div className="max-w-3xl mx-auto mt-3">
         <StickyTabs<Tab> tabs={tabs} value={tab} onChange={setTab} stickyTop={56} />
 
         <AnimatePresence mode="wait">
           <motion.div
             key={tab}
-            initial={{ opacity: 0, y: 6 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: 0.15 }}
             role="tabpanel"
             id={`panel-${tab}`}
             aria-labelledby={`tab-${tab}`}
@@ -856,7 +797,7 @@ const IconBtn = ({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className="grid place-items-center h-9 w-9 rounded-full border border-border bg-background hover:bg-secondary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 duration-fast"
+      className="grid place-items-center h-9 w-9 rounded-full border border-border bg-background hover:bg-secondary transition-colors active:scale-95"
     >
       {children}
     </button>
@@ -864,7 +805,7 @@ const IconBtn = ({
 };
 
 const AboutField = ({ label, value, href }: { label: string; value: string; href?: string }) => (
-  <div className="rounded-xl border border-border bg-card/50 px-3 py-2">
+  <div className="rounded-xl border border-border bg-card px-3 py-2">
     <dt className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</dt>
     <dd className="text-sm font-medium mt-0.5 truncate">
       {href ? (

@@ -1,0 +1,28 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Redesign the Auth page and Profile page for premium visual quality. Auth should have animated gradient background, polished inputs with floating labels feel, and premium button styling. Profile should have better header spacing, cleaner stats layout, and Instagram-level visual hierarchy.",
+  "status": "completed",
+  "steps": [
+    "In src/pages/Auth.tsx, redesign for premium onboarding: (1) Replace bg-black with bg-background. (2) Add 3 animated gradient orbs in background using framer-motion (animate position/scale slowly, blur-[150px]). (3) Make the brand text even larger and add a subtle text glow effect (text-6xl with drop-shadow-lg). (4) Restyle input fields: use bg-secondary/50 with rounded-2xl, add a left icon (Mail, Lock, User icons already imported) inside each input using relative positioning, increase height to h-13 (52px), add focus:ring-2 ring-primary/30 transition. (5) Make the primary CTA button taller (h-13 py-3.5), add bg-gradient-primary gradient, add shadow-glow on hover. (6) Make the Google button have a subtle border and shadow: border border-border shadow-sm. (7) Improve the divider 'or' section with slightly more spacing. (8) Add a subtle card-like container around the form with border border-white/[0.06] rounded-3xl p-8 bg-card/50 backdrop-blur-sm. (9) Make the toggle text (Already have account / Dont have account) larger and more visible.",
+    "In src/pages/Profile.tsx, redesign for Instagram-level quality: (1) Make the cover section taller (h-44 sm:h-56) with a subtle gradient overlay at the bottom for text readability. (2) Make the avatar larger (h-28 w-28) with a thicker ring (ring-4 ring-background) and add a subtle shadow. (3) Improve stats row: make numbers larger (text-lg font-bold) and labels smaller, add a subtle divider between stats. (4) Make the 'Follow' and 'Edit profile' buttons use rounded-2xl with h-11 for bigger touch targets. (5) Add more vertical spacing between sections (space-y-4 instead of space-y-2). (6) Replace bg-black/80 in the sticky header with bg-background/85 backdrop-blur-xl for consistency with feed. (7) Make the bio text slightly larger (text-base) with better line height."
+  ],
+  "acceptance_criteria": [
+    "Auth page has animated gradient background orbs",
+    "Auth inputs have icon prefixes, larger height, and rounded-2xl styling",
+    "Auth CTA button uses gradient background with glow shadow",
+    "Auth form is wrapped in a subtle card container",
+    "Profile cover is taller with gradient overlay",
+    "Profile avatar is larger (h-28 w-28) with proper ring",
+    "Profile stats have larger numbers with better visual hierarchy",
+    "Profile header uses glassmorphism (bg-background/85 backdrop-blur-xl)",
+    "bunx tsc --noEmit passes with 0 errors",
+    "bun run build succeeds"
+  ],
+  "verification": [
+    "Run bunx tsc --noEmit and confirm 0 errors",
+    "Run bun run build and confirm successful build"
+  ],
+  "blocked_reason": null,
+  "findings": "Profile.tsx had a duplicate supabase import which was removed. Both files compiled and built successfully. Auth page now has 3 animated gradient orbs, icon-prefixed inputs with h-[52px] and rounded-2xl, gradient CTA button with glow, card container with backdrop-blur, and larger toggle text. Profile page has taller cover (h-44 sm:h-56) with gradient overlay, larger avatar (h-28 w-28) with ring-4, stats with text-lg and vertical dividers, rounded-2xl h-11 action buttons, more section spacing (space-y-4), glassmorphism header (bg-background/85 backdrop-blur-xl), and text-base bio with leading-relaxed."
+}
