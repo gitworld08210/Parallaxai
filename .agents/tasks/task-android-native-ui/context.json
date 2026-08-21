@@ -1,0 +1,27 @@
+{
+  "project_type": "React + TypeScript + Vite social media app with Capacitor Android shell (mobile-first)",
+  "language": "TypeScript/TSX",
+  "build_system": "Vite + bun, Capacitor for native Android, Gradle for APK",
+  "test_framework": "vitest with @testing-library/react",
+  "build_command": "bun run build",
+  "test_command": "bun run test -- --run",
+  "verification_instructions": "1. Run bunx tsc --noEmit (must pass with 0 errors). 2. Run bun run build (must succeed). 3. Run bun run test -- --run (no new failures). 4. Run cap sync android + Gradle assembleDebug for APK.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "bun install (already done). For Android: export JAVA_HOME=/root/.local/share/mise/installs/java/21.0.2 && export PATH=\"$JAVA_HOME/bin:$PATH\"",
+  "environment_constraints": "OPEN_INTERNET mode. bun for JS. Java 21 for Android builds. No emulator available for runtime testing.",
+  "contribution_requirements": "Work on a feature branch. Push and create PR via gh api. Must pass tsc and build. Copy APKs to .lovable/ directory.",
+  "key_patterns": "shadcn/ui components in src/components/ui/. Tailwind CSS with custom tokens in src/index.css. Framer Motion for animations. Lucide icons. cn() utility for classnames. Pages in src/pages/. Layout in src/components/layout/. Social components in src/components/social/.",
+  "relevant_files": [
+    "src/index.css",
+    "src/components/layout/AppShell.tsx",
+    "src/components/layout/MobileNav.tsx",
+    "src/pages/Feed.tsx",
+    "src/pages/Reels.tsx",
+    "src/pages/Profile.tsx",
+    "src/components/social/PostCard.tsx",
+    "src/components/social/StoriesRail.tsx",
+    "src/components/social/StoryViewer.tsx",
+    "src/components/layout/AppLoadingScreen.tsx"
+  ],
+  "directory_structure": "src/pages/ = route pages, src/components/layout/ = shell/nav, src/components/social/ = feed/post/stories, src/components/ui/ = shadcn primitives, src/components/vibe/ = badges/avatars, android/ = Capacitor Android project"
+}

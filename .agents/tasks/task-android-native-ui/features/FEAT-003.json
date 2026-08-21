@@ -1,0 +1,25 @@
+{
+  "id": "FEAT-003",
+  "type": "chore",
+  "description": "Build Android APK and copy artifacts to .lovable/ directory. Sync Capacitor and run Gradle assembleDebug.",
+  "status": "completed",
+  "steps": [
+    "Run bun run build to produce fresh dist/",
+    "Run bunx cap sync android to sync web assets into the Android project",
+    "Set JAVA_HOME=/root/.local/share/mise/installs/java/21.0.2 and run ./gradlew clean assembleDebug --no-daemon in android/ directory",
+    "Create .lovable/ directory at project root if it does not exist",
+    "Copy all APK files from android/app/build/outputs/apk/debug/ to .lovable/"
+  ],
+  "acceptance_criteria": [
+    "Vite build succeeds",
+    "Capacitor sync completes without error",
+    "Gradle assembleDebug completes and produces APK files",
+    "APK files exist in .lovable/ directory"
+  ],
+  "verification": [
+    "ls .lovable/*.apk shows APK files",
+    "APK files are non-zero size"
+  ],
+  "blocked_reason": null,
+  "findings": "All steps completed successfully. Vite build in 8.60s. Capacitor sync in 0.123s. Gradle assembleDebug in 35s. Produced 3 ABI-split APKs (arm64-v8a, armeabi-v7a, x86_64) each approximately 3.6MB. Copied to .lovable/ directory. Gradle warned about deprecated features (incompatible with Gradle 9.0) and flatDir usage but build succeeded without errors."
+}

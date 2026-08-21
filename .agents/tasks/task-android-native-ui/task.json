@@ -1,0 +1,7 @@
+{
+  "task_id": "task-android-native-ui",
+  "task_description": "Complete UI overhaul to make the app look like native Android apps - specifically X (Twitter) for feed/profile/navigation and Instagram for Stories/Reels. Replace iOS glassmorphism with Material-like solid surfaces. Build Android APK.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003"],
+  "blocked_reason": null
+}
