@@ -390,8 +390,8 @@ const Profile = () => {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0 flex-1">
-          <p className="text-lg font-bold tracking-tight truncate leading-tight">{displayName}</p>
-          <p className="text-xs text-muted-foreground leading-tight">{fmt(profile.posts_count ?? 0)} posts</p>
+          <p className="text-[20px] font-bold tracking-tight truncate leading-tight">{displayName}</p>
+          <p className="text-[13px] text-muted-foreground leading-tight">{fmt(profile.posts_count ?? 0)} posts</p>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -583,7 +583,7 @@ const Profile = () => {
         <div className="mt-3 space-y-2">
           <div>
             <div className="flex items-center gap-1 flex-wrap">
-              <h1 className="text-xl font-extrabold tracking-tight leading-tight">
+              <h1 className="text-[20px] font-extrabold tracking-tight leading-6">
                 {displayName}
               </h1>
               {profile.verified && profile.verification_kind && (
@@ -616,12 +616,12 @@ const Profile = () => {
           </div>
 
           {profile.bio && (
-            <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
+            <p className="text-[15px] leading-5 whitespace-pre-wrap">{profile.bio}</p>
           )}
 
           {/* Location, link, calendar - X style inline */}
           {(locationRaw || websiteHref || joined) && (
-            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[15px] text-muted-foreground">
               {locationRaw && (
                 <span className="inline-flex items-center gap-1">
                   <MapPin className="h-3.5 w-3.5" />
@@ -649,7 +649,7 @@ const Profile = () => {
           )}
 
           {/* Stats - X style: Following (count) Followers (count) in one line */}
-          <div className="flex items-center gap-4 text-[14px]">
+          <div className="flex items-center gap-4 text-[15px]">
             <Link to={`/u/${profile.username}/following`} className="hover:underline">
               <span className="font-bold text-foreground">{fmt(profile.following_count ?? 0)}</span>
               <span className="text-muted-foreground ml-1">Following</span>
