@@ -1,0 +1,31 @@
+{
+  "project_type": "React + TypeScript + Vite social media app (Capacitor mobile-first)",
+  "language": "TypeScript / React",
+  "build_system": "Vite with bun as package manager. Capacitor for native Android/iOS.",
+  "test_framework": "Vitest with @testing-library/react. Pre-existing tests have 7 environment errors but 1 passes.",
+  "build_command": "bun run build",
+  "test_command": "bun run test -- --run",
+  "verification_instructions": "1. Run bunx tsc --noEmit (must pass with 0 errors). 2. Run bun run build (must succeed). 3. Pre-existing test errors are acceptable - new code must not break the 1 passing test.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "Dependencies already installed. Branch feat/ui-redesign already created and checked out.",
+  "environment_constraints": "OPEN_INTERNET network mode. Bun installed. No Docker needed for verification. Android build available but not required for UI changes.",
+  "contribution_requirements": "Must pass TypeScript type checking. Must build successfully. Keep all existing functionality working. Keep Tailwind CSS + shadcn/ui architecture. Keep Framer Motion for animations. Mobile-first design (Capacitor Android app).",
+  "key_patterns": "CSS custom properties in src/index.css define the design system tokens (HSL format). Tailwind config extends colors from CSS vars. Components use cn() utility from @/lib/utils for className merging. Pages are in src/pages/. Layout components in src/components/layout/. UI primitives in src/components/ui/ (shadcn pattern). AppShell wraps all authenticated routes with a simulated phone frame (rounded corners + notch) that needs to be removed for real mobile. MobileNav is a fixed bottom bar. Feed has sticky header with translucent backdrop.",
+  "relevant_files": [
+    "src/index.css",
+    "src/components/layout/AppShell.tsx",
+    "src/components/layout/MobileNav.tsx",
+    "src/components/layout/AppLoadingScreen.tsx",
+    "src/pages/Feed.tsx",
+    "src/pages/Auth.tsx",
+    "src/pages/Profile.tsx",
+    "src/components/social/PostCard.tsx",
+    "src/components/social/StoriesRail.tsx",
+    "src/components/social/FeedSkeleton.tsx",
+    "src/components/ui/button.tsx",
+    "src/components/ui/card.tsx",
+    "src/components/ui/input.tsx",
+    "tailwind.config.ts"
+  ],
+  "directory_structure": "src/pages/ - 58 page components. src/components/layout/ - AppShell, MobileNav, SideMenu, AppLoadingScreen. src/components/ui/ - shadcn primitives (button, card, input, etc). src/components/social/ - PostCard, StoriesRail, FeedSkeleton, CommentSheet. src/components/vibe/ - AuraAvatar, VerificationBadge. tailwind.config.ts - Tailwind theme extensions. src/index.css - all CSS custom properties and global styles."
+}

@@ -1,0 +1,31 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Overhaul the design system foundation: color tokens, typography, global CSS, and base UI primitives (button, card, input). Replace pure black background with rich deep charcoal. Add vibrant primary colors, gradient enhancements, and glassmorphism surfaces. Improve button and card elevation. Fix AppShell to remove fake phone frame for actual mobile usage.",
+  "status": "completed",
+  "steps": [
+    "In src/index.css, replace --background: 0 0% 0% with a rich dark charcoal like 230 15% 5% (approx #0a0a0f). Adjust --surface, --surface-elevated, --surface-glass, --card to have more separation from background (lighter values). Make --border slightly more visible (e.g., 230 15% 15%). Keep the HSL format convention.",
+    "In src/index.css, make --primary more vibrant: shift to a brighter electric blue/violet (e.g., 230 90% 60% or 250 85% 62%). Update --primary-glow accordingly. Make --accent distinct from primary. Ensure gradient variables use the new primary.",
+    "In src/index.css, add new utility classes: a .shimmer-skeleton class for premium skeleton loading (gradient animation background instead of flat gray), a .press-scale class for button press feedback (active:scale-[0.97] with transition).",
+    "In src/components/layout/AppShell.tsx, remove the fake phone simulation. The outer wrapper should just be a full-screen flex column without max-width constraints, rounded corners, fake notch div, or device-frame borders. Keep min-h-screen, bg-background, and the flex structure for main + nav. Remove the sm:rounded-[3rem] sm:border-[12px] sm:border-zinc-900 classes and the notch div entirely. Remove sm:h-[844px] max-w-[440px] aspect-[9/19.5]. The wrapper should be w-full h-full (full screen on all devices).",
+    "In src/components/ui/button.tsx, update the default variant to include shadow and a subtle hover glow: add shadow-sm hover:shadow-md to default variant. Make rounded-md into rounded-xl for a more modern feel. Add active:scale-[0.97] transition-all to the base classes.",
+    "In src/components/ui/card.tsx, update the Card base classes to use rounded-2xl instead of rounded-lg. Add a subtle border-white/[0.06] in dark mode feel: replace border with border border-white/[0.08]. Add bg-gradient for subtle depth: keep bg-card but add shadow-md for elevation.",
+    "In src/components/ui/input.tsx, make inputs more polished: increase height to h-12, use rounded-xl, add bg-secondary/50 for subtle fill, transition-all for smooth focus states.",
+    "In tailwind.config.ts, add a serif font family entry for hero/brand text: fontFamily.serif: ['Playfair Display', 'Georgia', 'serif']. This is used for the Parallax brand text throughout the app."
+  ],
+  "acceptance_criteria": [
+    "Background is no longer pure black - visually distinct deep charcoal tone",
+    "Cards and surfaces have visible separation from background",
+    "Buttons have rounded-xl corners, press feedback animation, and subtle shadow",
+    "AppShell renders full-screen without simulated phone frame or notch",
+    "Inputs are taller (h-12) with rounded-xl and subtle fill background",
+    "bunx tsc --noEmit passes with 0 errors",
+    "bun run build succeeds"
+  ],
+  "verification": [
+    "Run bunx tsc --noEmit and confirm 0 errors",
+    "Run bun run build and confirm successful build"
+  ],
+  "blocked_reason": null,
+  "findings": "All changes verified: bunx tsc --noEmit exits 0, bun run build succeeds. Removed unused SideMenu and useMediaQuery imports from AppShell since the phone frame was removed. Background changed from 0 0% 0% to 230 15% 5%. Primary shifted from sky blue (203 89% 53%) to vibrant violet (250 85% 62%). Accent made distinct from primary (320 75% 58% magenta vs old 262 83% 65% which was too close to primary)."
+}
