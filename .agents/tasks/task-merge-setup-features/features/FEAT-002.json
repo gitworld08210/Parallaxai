@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Create all missing database tables in Supabase that the code references but do not yet exist. The code uses .from() on ~75 tables but only 26 exist in the DB. The types/supabase.ts defines 56 table types. Create the core missing tables that are referenced in code with proper RLS policies. Use the Supabase MCP apply_migration tool.",
+  "status": "pending",
+  "steps": [
+    "Create core social tables: comments, saves, blocks, mutes, notifications, user_interests, usernames, conversations, conversation_reads, unread_counts, community_posts",
+    "Create content tables: story_stickers, story_sticker_responses, post_unlocks",
+    "Create economy tables: wallets, ledger, transactions, coin_purchases, coin_topups, coin_transactions, tips, gift_catalog, subscriptions, subscription_tiers, subscription_transactions, payment_settings",
+    "Create live/media tables: live_streams, live_chat, live_gifts, live_tickets, calls, call_signals",
+    "Create system tables: admin_audit_logs, error_logs, config, push_tokens, onboarding_sessions, virtual_world_access, virtual_world_applications, virtual_world_logs, verification_requests, ads_user_interests, email_accounts",
+    "Enable RLS on all new tables with appropriate policies (owner can read/write own data, public can read public data)",
+    "Verify tables exist by running list_tables on the Supabase project"
+  ],
+  "acceptance_criteria": [
+    "All tables referenced in src/types/supabase.ts exist in the Supabase database",
+    "RLS is enabled on all tables",
+    "Basic policies allow authenticated users to interact with their own data"
+  ],
+  "verification": [
+    "Use Supabase MCP list_tables to confirm all expected tables exist",
+    "Run `bun run build` to confirm the app still compiles"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

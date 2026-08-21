@@ -1,0 +1,23 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Set up Supabase Auth providers (Email and Google OAuth) in the dashboard using the Supabase MCP. The app already has Email+Password signup/signin and Google OAuth via supabase.auth.signInWithOAuth (see src/pages/Auth.tsx). Configure these providers in the Supabase project.",
+  "status": "pending",
+  "steps": [
+    "Use Supabase MCP execute_sql to check current auth configuration",
+    "Ensure Email auth provider is enabled (it likely is by default)",
+    "Note: Google OAuth requires setting up Google Cloud Console credentials (client_id and client_secret) which we cannot do programmatically. Document what needs to be configured manually.",
+    "Verify the auth.users table and related auth infrastructure is properly set up"
+  ],
+  "acceptance_criteria": [
+    "Email auth provider is confirmed enabled",
+    "Google OAuth provider status is verified",
+    "Auth configuration is documented"
+  ],
+  "verification": [
+    "Use Supabase MCP to verify auth configuration",
+    "Run `bun run build` to confirm the app still compiles"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

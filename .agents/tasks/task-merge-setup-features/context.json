@@ -1,0 +1,28 @@
+{
+  "project_type": "React + TypeScript + Vite SPA with Capacitor for Android/iOS, social media app called Aurelix",
+  "language": "TypeScript",
+  "build_system": "Vite with bun package manager, Capacitor for native builds, Gradle for Android APK",
+  "test_framework": "vitest with jsdom, @testing-library/react, setup in src/test/setup.ts",
+  "build_command": "bun run build",
+  "test_command": "bun run test -- --run",
+  "verification_instructions": "1. Run `bun run build` to confirm Vite build passes. 2. Run `bun run test -- --run` to confirm tests pass. 3. Run `bunx tsc --noEmit` for type checking.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "1. `bun install` in project root. 2. For Android: set JAVA_HOME=/root/.local/share/mise/installs/java/21.0.2, run `bun run cap:build:android`, then `./gradlew clean assembleDebug --no-daemon` in android/",
+  "environment_constraints": "OPEN_INTERNET network mode. Android SDK at /projects/sandbox/android-sdk. JAVA_HOME=/root/.local/share/mise/installs/java/21.0.2. GitHub REST API only (no GraphQL).",
+  "contribution_requirements": "Use gh api REST endpoints for PR operations. APK artifacts go to .lovable/ directory.",
+  "key_patterns": "Lazy-loaded routes in App.tsx, AuthProvider with Supabase session management, ProtectedRoute for auth gating, shadcn/ui components, Cloudinary for media uploads, useInfiniteSupabase hook for paginated data, services directory for business logic",
+  "relevant_files": [
+    "src/App.tsx",
+    "src/contexts/AuthProvider.tsx",
+    "src/components/ProtectedRoute.tsx",
+    "src/integrations/supabase/client.ts",
+    "src/types/supabase.ts",
+    "src/lib/cloudinary.ts",
+    "src/pages/Auth.tsx",
+    "src/pages/Feed.tsx",
+    "src/hooks/useNativeApp.ts",
+    "capacitor.config.ts",
+    "android/app/src/main/res/values/styles.xml"
+  ],
+  "directory_structure": "src/pages/ (58 page components), src/components/ (auth, layout, social, ui, wallet, etc.), src/hooks/, src/services/, src/contexts/, src/types/, android/ (Capacitor Android project), supabase/ (config)"
+}

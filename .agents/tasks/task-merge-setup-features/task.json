@@ -1,0 +1,7 @@
+{
+  "task_id": "task-merge-setup-features",
+  "task_description": "Merge PRs, set up Supabase auth and database tables, add new social features (loading screen, pull-to-refresh, story progress), fix black screen with visible loading, then build Android APK last",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
+  "blocked_reason": null
+}

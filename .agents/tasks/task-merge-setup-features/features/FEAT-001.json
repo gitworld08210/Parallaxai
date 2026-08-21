@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Merge both open PRs into main. PR #1 (fix/android-startup-black-screen) is already contained in PR #2 (feat/migrate-firebase-to-supabase) as commit 11c7e2a. Merge PR #2 which contains everything, then close PR #1. Update local main branch.",
+  "status": "completed",
+  "steps": [
+    "Use `gh api repos/gitworld08210/Parallaxai/pulls/1/merge -X PUT -f merge_method=squash` to merge PR #1 first (black screen fix)",
+    "Use `gh api repos/gitworld08210/Parallaxai/pulls/2/merge -X PUT -f merge_method=squash` to merge PR #2 (firebase-to-supabase migration which includes the black screen fix)",
+    "Run `git checkout main && git pull origin main` to update local main branch",
+    "Verify the merge was successful by checking git log"
+  ],
+  "acceptance_criteria": [
+    "Both PRs are merged/closed on GitHub",
+    "Local main branch is up to date with all changes from both PRs",
+    "git log on main shows the merged commits"
+  ],
+  "verification": [
+    "Run `gh api repos/gitworld08210/Parallaxai/pulls/1 --jq .state` should return 'closed'",
+    "Run `gh api repos/gitworld08210/Parallaxai/pulls/2 --jq .state` should return 'closed'",
+    "Run `bun run build` on main to confirm everything compiles"
+  ],
+  "blocked_reason": null,
+  "findings": "Merged PR #1 first (squash), which caused PR #2 to become unmergeable (dirty state) since PR #2 already contained PR #1's commit 11c7e2a. Resolved by rebasing feat/migrate-firebase-to-supabase onto updated main (git automatically skipped the duplicate commit), then force-pushed and merged PR #2. Both PRs now closed. Build verified successfully on main."
+}

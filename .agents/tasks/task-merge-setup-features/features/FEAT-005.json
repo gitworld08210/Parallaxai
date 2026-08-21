@@ -1,0 +1,24 @@
+{
+  "id": "FEAT-005",
+  "type": "feat",
+  "description": "Build the Android APK with all changes applied. This is the LAST step. Sync the web build to Capacitor, then run the Gradle build to produce debug APKs. Copy the resulting APKs to .lovable/ directory.",
+  "status": "pending",
+  "steps": [
+    "Run `bun run build` to create the web dist/",
+    "Run `bun run cap:build:android` to sync to Android (builds web + syncs capacitor)",
+    "Set JAVA_HOME=/root/.local/share/mise/installs/java/21.0.2 and run `./gradlew clean assembleDebug --no-daemon` in the android/ directory",
+    "Copy the resulting APK files from android/app/build/outputs/apk/debug/ to .lovable/ directory",
+    "Verify APK files exist and are reasonable size (expected ~3-11MB each)"
+  ],
+  "acceptance_criteria": [
+    "APK files exist in .lovable/ directory",
+    "At least one APK file for arm64-v8a architecture exists",
+    "APK files are non-zero size (>1MB each)"
+  ],
+  "verification": [
+    "Check .lovable/ directory contains APK files",
+    "Verify file sizes with ls -la"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}
