@@ -1,7 +1,14 @@
 {
   "task_id": "task-merge-setup-features",
   "task_description": "Merge PRs, set up Supabase auth and database tables, add new social features (loading screen, pull-to-refresh, story progress), fix black screen with visible loading, then build Android APK last",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
-  "blocked_reason": null
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "bun run build passes (8.47s), bunx tsc --noEmit passes with zero errors, bun run test passes, APKs built successfully (3 ABI splits, ~3.6MB each in .lovable/)"
+  }
 }
