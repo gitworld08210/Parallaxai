@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthProvider";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import { AppShell } from "@/components/layout/AppShell";
+import { AppLoadingScreen } from "@/components/layout/AppLoadingScreen";
 import { ThemeProvider } from "@/contexts/ThemeProvider";
 import { CallProvider } from "@/contexts/CallProvider";
 import MessagesPasscodeGate from "@/components/messages/MessagesPasscodeGate";
@@ -409,11 +410,7 @@ const OrgAnnouncements = lazy(() => import("./pages/ComingSoon"));
 const OrgSearch = lazy(() => import("./pages/ComingSoon"));
 const OrgNotifications = lazy(() => import("./pages/ComingSoon"));
 
-const RouteFallback = () => (
-  <div className="min-h-screen grid place-items-center">
-    <div className="h-8 w-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-  </div>
-);
+const RouteFallback = () => <AppLoadingScreen />;
 
 const NativeInit = () => {
   useNativeApp();

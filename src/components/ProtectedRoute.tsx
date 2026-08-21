@@ -1,17 +1,13 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthProvider';
-import { Loader2 } from 'lucide-react';
+import { AppLoadingScreen } from '@/components/layout/AppLoadingScreen';
 
 export const ProtectedRoute = () => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] grid place-items-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   if (!user) {
@@ -26,11 +22,7 @@ export const AdminOSGate = ({ children }: { children?: React.ReactNode }) => {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] grid place-items-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   // FIX: Check authentication FIRST before checking authorization
@@ -55,11 +47,7 @@ export const ExecutiveGate = ({ children }: { children?: React.ReactNode }) => {
   const location = useLocation();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#050505] grid place-items-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <AppLoadingScreen />;
   }
 
   // FIX: Check authentication FIRST
