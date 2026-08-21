@@ -2,24 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TipSheet } from "./TipSheet";
 
-// Mock firebase/firestore
-vi.mock("firebase/firestore", () => ({
-  collection: vi.fn(),
-  doc: vi.fn(),
-  getDoc: vi.fn().mockResolvedValue({ exists: () => true, data: () => ({ total: 500 }) }),
-  updateDoc: vi.fn().mockResolvedValue(undefined),
-  addDoc: vi.fn().mockResolvedValue({ id: "mock-tx-id" }),
-  increment: vi.fn((n) => n),
-  serverTimestamp: vi.fn(() => "mock-timestamp"),
-  onSnapshot: vi.fn((_, cb) => {
-    cb({ exists: () => true, data: () => ({ total: 500 }) });
-    return () => {};
-  }),
-}));
 
-vi.mock("@/lib/firebase", () => ({
-  db: {},
-}));
 
 vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({ user: { id: "test-user-123" }, profile: { username: "testuser" } }),

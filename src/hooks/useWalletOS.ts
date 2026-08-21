@@ -37,21 +37,6 @@ export function useWalletOS() {
     if (!user) { setWallet(null); setLoading(false); return; }
     setLoading(true);
 
-    try {
-      // 1. Check Firestore
-      const { doc, getDoc } = await import("firebase/firestore");
-      const { db } = await import("@/lib/firebase");
-      const snap = await getDoc(doc(db, "wallets", user.id));
-      if (snap.exists()) {
-        setWallet(snap.data() as WalletOverview);
-        setLoading(false);
-        return;
-      }
-    } catch (e) {
-      console.warn("Firestore wallet overview fetch failed", e);
-    }
-
-    // 2. Legacy RPC Fallback
     const { data } = await supabase.rpc("wallet_overview" as never, { _user_id: user.id } as never);
     setWallet((data as unknown as WalletOverview) ?? null);
     setLoading(false);
@@ -85,27 +70,6 @@ export function useWalletLedgerOS(limit = 50) {
     if (!user) { setRows([]); setLoading(false); return; }
     setLoading(true);
 
-    try {
-      // 1. Firestore Ledger
-      const { collection, query, where, orderBy, limit: fireLimit, getDocs } = await import("firebase/firestore");
-      const { db } = await import("@/lib/firebase");
-      const q = query(
-        collection(db, "ledger"),
-        where("user_id", "==", user.id),
-        orderBy("created_at", "desc"),
-        fireLimit(limit)
-      );
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        setRows(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as WalletTxn[]);
-        setLoading(false);
-        return;
-      }
-    } catch (e) {
-      console.warn("Firestore ledger fetch failed", e);
-    }
-
-    // 2. Supabase Fallback.
     const { data } = await supabase.from("wallet_ledger" as any).select("id, txn_id, direction, bucket, source, amount, fee, balance_after, status, label, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(limit);
     setRows((data as unknown as WalletTxn[]) ?? []);
     setLoading(false);
@@ -127,22 +91,6 @@ export function useWalletAnalytics(days = 30) {
     let alive = true;
     (async () => {
       setLoading(true);
-      try {
-        const { collection, query, where, getDocs } = await import("firebase/firestore");
-        const { db } = await import("@/lib/firebase");
-        // Firestore analytics usually requires pre-aggregated data or a cloud function
-        // For now, check if 'wallet_analytics' collection exists or fall back
-        const q = query(collection(db, "wallet_analytics"), where("user_id", "==", user.id));
-        const snap = await getDocs(q);
-        if (!snap.empty && alive) {
-          setRows(snap.docs.map(doc => doc.data()) as WalletDay[]);
-          setLoading(false);
-          return;
-        }
-      } catch (e) {
-        console.warn("Firestore analytics fetch failed", e);
-      }
-
       if (!alive) return;
       const { data } = await supabase.rpc("wallet_analytics" as never, { _user_id: user.id, _days: days } as never);
       setRows((data as unknown as WalletDay[]) ?? []);

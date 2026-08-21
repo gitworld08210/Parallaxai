@@ -1,15 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthProvider";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  where,
-  orderBy,
-  getDocs,
-  limit,
-  Timestamp,
-} from "firebase/firestore";
+import { supabase } from "@/integrations/supabase/client";
 import { subDays, startOfDay, format } from "date-fns";
 
 export type Period = "7d" | "30d";
@@ -51,13 +42,6 @@ export interface AnalyticsData {
   loading: boolean;
 }
 
-function toDate(val: any): Date {
-  if (!val) return new Date();
-  if (val instanceof Timestamp) return val.toDate();
-  if (val.seconds) return new Date(val.seconds * 1000);
-  return new Date(val);
-}
-
 function buildDailyMap(days: number): Map<string, number> {
   const map = new Map<string, number>();
   const now = new Date();
@@ -93,66 +77,57 @@ export function useCreatorAnalytics(period: Period): AnalyticsData {
 
     async function fetchAnalytics() {
       const startDate = startOfDay(subDays(new Date(), days));
-      const startTimestamp = Timestamp.fromDate(startDate);
+      const startDateISO = startDate.toISOString();
 
       try {
         // Fetch posts
-        const postsQuery = query(
-          collection(db, "posts"),
-          where("user_id", "==", user!.id),
-          orderBy("created_at", "desc"),
-          limit(50)
-        );
-        const postsSnap = await getDocs(postsQuery);
-        const posts: PostMetric[] = postsSnap.docs.map((doc) => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            content: d.content || "",
-            media_url: d.media_url || null,
-            media_type: d.media_type || null,
-            like_count: d.like_count || 0,
-            comment_count: d.comment_count || 0,
-            view_count: d.view_count || 0,
-            created_at: toDate(d.created_at),
-            status: d.status || "published",
-          };
-        });
+        const { data: postsData } = await supabase
+          .from('posts')
+          .select('*')
+          .eq('user_id', user!.id)
+          .order('created_at', { ascending: false })
+          .limit(50);
+
+        const posts: PostMetric[] = ((postsData || []) as any[]).map((d: any) => ({
+          id: d.id,
+          content: d.content || "",
+          media_url: d.media_url || null,
+          media_type: d.media_type || null,
+          like_count: d.like_count || 0,
+          comment_count: d.comment_count || 0,
+          view_count: d.view_count || 0,
+          created_at: new Date(d.created_at),
+          status: d.status || "published",
+        }));
 
         // Fetch follows (new followers in period)
-        const followsQuery = query(
-          collection(db, "follows"),
-          where("following_id", "==", user!.id),
-          where("created_at", ">=", startTimestamp),
-          orderBy("created_at", "desc")
-        );
-        const followsSnap = await getDocs(followsQuery);
-        const followers = followsSnap.docs.map((doc) => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            follower_id: d.follower_id,
-            created_at: toDate(d.created_at),
-          };
-        });
+        const { data: followsData } = await supabase
+          .from('follows')
+          .select('*')
+          .eq('following_id', user!.id)
+          .gte('created_at', startDateISO)
+          .order('created_at', { ascending: false });
+
+        const followers = ((followsData || []) as any[]).map((d: any) => ({
+          id: d.id,
+          follower_id: d.follower_id,
+          created_at: new Date(d.created_at),
+        }));
 
         // Fetch tip transactions (earnings)
-        const txQuery = query(
-          collection(db, "transactions"),
-          where("recipient_id", "==", user!.id),
-          where("type", "==", "tip"),
-          where("created_at", ">=", startTimestamp),
-          orderBy("created_at", "desc")
-        );
-        const txSnap = await getDocs(txQuery);
-        const transactions = txSnap.docs.map((doc) => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            amount: d.amount || 0,
-            created_at: toDate(d.created_at),
-          };
-        });
+        const { data: txData } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('recipient_id', user!.id)
+          .eq('type', 'tip')
+          .gte('created_at', startDateISO)
+          .order('created_at', { ascending: false });
+
+        const transactions = ((txData || []) as any[]).map((d: any) => ({
+          id: d.id,
+          amount: d.amount || 0,
+          created_at: new Date(d.created_at),
+        }));
 
         // Calculate totals
         const postsInPeriod = posts.filter(

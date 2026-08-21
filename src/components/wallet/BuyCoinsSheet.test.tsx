@@ -2,21 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BuyCoinsSheet } from "./BuyCoinsSheet";
 
-// Mock firebase/firestore
-vi.mock("firebase/firestore", () => ({
-  collection: vi.fn(),
-  query: vi.fn(),
-  limit: vi.fn(),
-  getDocs: vi.fn().mockResolvedValue({ empty: true, docs: [] }),
-  addDoc: vi.fn().mockResolvedValue({ id: "mock-doc-id" }),
-  doc: vi.fn(),
-  updateDoc: vi.fn().mockResolvedValue(undefined),
-  serverTimestamp: vi.fn(() => "mock-timestamp"),
-}));
 
-vi.mock("@/lib/firebase", () => ({
-  db: {},
-}));
 
 vi.mock("@/contexts/AuthProvider", () => ({
   useAuth: () => ({ user: { id: "test-user-123" }, profile: null }),

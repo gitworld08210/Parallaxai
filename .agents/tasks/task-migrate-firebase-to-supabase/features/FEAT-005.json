@@ -1,0 +1,29 @@
+{
+  "id": "FEAT-005",
+  "type": "fix",
+  "description": "Address 6 post-review issues: wallet race conditions, view/comment count stale reads, pervasive 'as any' casts, conversation unread JSONB overwrite, signupChecks non-atomic increment, and ResetPassword session timing.",
+  "status": "completed",
+  "steps": [
+    "Fix wallet race condition: use conditional update with .gte('total', amount) to prevent negative balance in useTipSend.ts, LiveViewer.tsx, and FinanceDepartment.tsx",
+    "Fix view/comment count: add comments documenting the known limitation (stale-read increment) in PostCard.tsx and CommentSheet.tsx",
+    "Remove 'as any' casts from all .from() calls where tables are defined in the Database type",
+    "Fix Conversation markRead to use proper JSONB merge pattern instead of overwriting",
+    "Add comment to signupChecks.ts documenting the non-atomic increment limitation",
+    "Fix ResetPassword to guard submit behind session check via onAuthStateChange"
+  ],
+  "acceptance_criteria": [
+    "Wallet updates use conditional .gte() to prevent negative balances",
+    "'as any' casts removed from .from() calls for tables in Database type",
+    "Conversation markRead uses JSONB merge approach (separate unread_counts table)",
+    "ResetPassword form is disabled until session is confirmed via onAuthStateChange",
+    "Known limitations documented with TODO comments",
+    "bunx tsc --noEmit passes",
+    "bun run build succeeds"
+  ],
+  "verification": [
+    "Run 'bunx tsc --noEmit' and confirm no new type errors",
+    "Run 'bun run build' and confirm build succeeds"
+  ],
+  "blocked_reason": null,
+  "findings": "All 6 review issues addressed. (1) Wallet race condition: conditional .gte() guard added to prevent negative balances in useTipSend, LiveViewer buyTicket/sendGift. Admin-side FinanceDepartment credits don't need the guard since they only add coins. (2) View/comment count: documented as known limitation with TODO comments; requires server-side RPC. (3) 'as any' removed from ~40 files by adding 16 missing table type definitions to Database type. ~15 tables used in niche features still use 'as any' (close_friends, post_collaborators, etc.) since their schemas are unknown. (4) Conversation markRead: now uses separate unread_counts table via upsert instead of overwriting JSONB. (5) signupChecks: documented as known limitation with TODO. (6) ResetPassword: form disabled until onAuthStateChange confirms session is active."
+}

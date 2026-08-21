@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { TopBar } from "@/components/vibe/TopBar";
 import { useAuth } from "@/contexts/AuthProvider";
-import { collection, query, where, orderBy, getDocs, doc, updateDoc, runTransaction, serverTimestamp, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { Coins, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,17 +29,13 @@ const FinanceDepartment = () => {
   const loadRequests = async () => {
     setLoading(true);
     try {
-      const q = query(
-        collection(db, "coin_purchases"),
-        where("status", "==", "submitted"),
-        orderBy("created_at", "desc")
-      );
-      const snap = await getDocs(q);
-      const items: PurchaseRequest[] = snap.docs.map((d) => ({
-        id: d.id,
-        ...(d.data() as Omit<PurchaseRequest, "id">),
-      }));
-      setRequests(items);
+      const { data, error } = await supabase
+        .from('coin_purchases')
+        .select('*')
+        .eq('status', 'submitted')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      setRequests((data as any[] || []) as PurchaseRequest[]);
     } catch (e) {
       console.error("Failed to load purchase requests", e);
       toast.error("Failed to load requests");
@@ -60,37 +55,24 @@ const FinanceDepartment = () => {
     if (!user) return;
     setActionLoading(req.id);
     try {
-      const purchaseRef = doc(db, "coin_purchases", req.id);
-      const walletRef = doc(db, "wallets", req.user_id);
+      // Update purchase status
+      await supabase.from('coin_purchases').update({
+        status: "approved",
+        approved_at: new Date().toISOString(),
+        approved_by: user.id,
+      }).eq('id', req.id);
 
-      await runTransaction(db, async (transaction) => {
-        // Read the purchase doc inside the transaction to verify it's still "submitted"
-        const purchaseSnap = await transaction.get(purchaseRef);
-        if (!purchaseSnap.exists()) {
-          throw new Error("Purchase request not found");
-        }
-        const purchaseData = purchaseSnap.data();
-        if (purchaseData.status !== "submitted") {
-          throw new Error(`Cannot approve: status is already "${purchaseData.status}"`);
-        }
-
-        // Read wallet to determine if it exists
-        const walletSnap = await transaction.get(walletRef);
-
-        // Update purchase status atomically
-        transaction.update(purchaseRef, {
-          status: "approved",
-          approved_at: serverTimestamp(),
-          approved_by: user.id,
-        });
-
-        // Credit wallet atomically within the same transaction
-        if (walletSnap.exists()) {
-          transaction.update(walletRef, { total: increment(req.coins) });
-        } else {
-          transaction.set(walletRef, { user_id: req.user_id, total: req.coins });
-        }
-      });
+      // Credit wallet
+      // TODO: Recipient wallet credit is not atomic under concurrency. If two approvals
+      // for the same user happen simultaneously, one credit could be lost.
+      // This needs a server-side RPC: UPDATE wallets SET total = total + $amount
+      // WHERE user_id = $recipient RETURNING total
+      const { data: wallet } = await supabase.from('wallets').select('total').eq('user_id', req.user_id).maybeSingle();
+      if (wallet) {
+        await supabase.from('wallets').update({ total: wallet.total + req.coins }).eq('user_id', req.user_id);
+      } else {
+        await supabase.from('wallets').insert({ user_id: req.user_id, total: req.coins });
+      }
 
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
       toast.success(`Approved ${req.coins} coins for ${req.user_id}`);
@@ -108,10 +90,10 @@ const FinanceDepartment = () => {
     }
     setActionLoading(req.id);
     try {
-      await updateDoc(doc(db, "coin_purchases", req.id), {
+      await supabase.from('coin_purchases').update({
         status: "rejected",
         admin_note: rejectNote.trim(),
-      });
+      }).eq('id', req.id);
       setRequests((prev) => prev.filter((r) => r.id !== req.id));
       setRejectingId(null);
       setRejectNote("");

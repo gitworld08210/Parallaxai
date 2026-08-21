@@ -70,10 +70,8 @@ const ReelCompose = () => {
         if (mod?.flagged) throw new Error(mod.reason || "Caption flagged");
       }
       const url = await uploadToCloudinary(file);
-      const { doc, addDoc, collection, serverTimestamp } = await import("firebase/firestore");
-      const { db } = await import("@/lib/firebase");
       
-      const postRef = await addDoc(collection(db, "posts"), {
+      const { data: postDoc, error: postErr } = await supabase.from('posts').insert({
         user_id: user.id,
         content: content.trim() + (music ? `\n\n🎵 ${music}` : ""),
         media_url: url,
@@ -82,15 +80,16 @@ const ReelCompose = () => {
         status: "published",
         like_count: 0,
         comment_count: 0,
-        created_at: serverTimestamp(),
+        created_at: new Date().toISOString(),
         profile: {
           username: profile?.username || "",
           display_name: profile?.display_name || "User",
           avatar_url: profile?.avatar_url || null,
           verified: !!profile?.verified,
         }
-      });
-      const newId = postRef.id;
+      } as any).select().single();
+      if (postErr) throw postErr;
+      const newId = (postDoc as any)?.id;
       if (certify && newId) {
         void reliableInvoke("ownership-certify", { body: { post_id: newId }, retries: 1 });
       }

@@ -1,15 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  orderBy,
-  query,
-  where,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 import { Button } from "@/components/ui/button";
 import { Radio } from "lucide-react";
@@ -24,30 +15,22 @@ export default function LiveList() {
   useEffect(() => {
     (async () => {
       try {
-        const q = query(
-          collection(db, "live_streams"),
-          where("status", "==", "live"),
-          orderBy("started_at", "desc")
-        );
-        const snap = await getDocs(q);
-        const rawStreams: Stream[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as Stream[];
+        const { data } = await supabase
+          .from('live_streams')
+          .select('*')
+          .eq('status', 'live')
+          .order('started_at', { ascending: false });
+        const rawStreams = (data as any[] || []) as Stream[];
 
         // Fetch host profiles
-        const enriched: StreamWithProfile[] = await Promise.all(
-          rawStreams.map(async (s) => {
-            try {
-              const profSnap = await getDoc(doc(db, "profiles", s.host_id));
-              if (profSnap.exists()) {
-                const profData = profSnap.data();
-                return { ...s, username: profData.username, avatar_url: profData.avatar_url };
-              }
-            } catch { /* noop */ }
-            return s;
-          })
-        );
+        const hostIds = rawStreams.map(s => s.host_id);
+        const { data: profiles } = await supabase.from('profiles').select('user_id, username, avatar_url').in('user_id', hostIds);
+        const profileMap = new Map((profiles as any[] || []).map((p: any) => [p.user_id, p]));
+
+        const enriched: StreamWithProfile[] = rawStreams.map(s => {
+          const prof = profileMap.get(s.host_id);
+          return { ...s, username: prof?.username, avatar_url: prof?.avatar_url };
+        });
         setStreams(enriched);
       } catch (e) {
         console.warn("Could not load live streams", e);

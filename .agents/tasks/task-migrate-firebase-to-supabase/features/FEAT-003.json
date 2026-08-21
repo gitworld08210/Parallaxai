@@ -1,0 +1,40 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Migrate all Firestore reads/writes to Supabase for social features (posts, likes, comments, stories, follows, saves, notifications, unread_counts) and wallet/transaction features (wallets, transactions, coin_purchases, payment_settings, tips). Also migrate the useInfiniteFirestore hook to a Supabase-based infinite query pattern, and update all components that use these features.",
+  "status": "completed",
+  "steps": [
+    "Create src/hooks/useInfiniteSupabase.ts: A cursor-based pagination hook that replaces useInfiniteFirestore.ts but queries Supabase instead of Firestore. Accept a table name, query options (filters, ordering), and pageSize.",
+    "Migrate src/components/social/PostCard.tsx: Replace all Firestore operations (getDoc, setDoc, deleteDoc, updateDoc, increment on likes, saves, posts, view_count) with equivalent supabase.from() calls. Import supabase from '@/integrations/supabase/client'. Remove import of db from '@/lib/firebase' and all firebase/firestore imports.",
+    "Migrate src/components/social/CommentSheet.tsx: Replace Firestore onSnapshot listener on 'comments' collection with supabase.from('comments').select(...) + supabase channel real-time subscription. Replace addDoc for comments and updateDoc for post comment_count with supabase .insert() and .update().",
+    "Migrate src/components/social/StoriesRail.tsx: Replace Firestore query on 'stories' collection with supabase.from('stories').select(...).gt('expires_at', new Date().toISOString()).",
+    "Migrate src/components/social/StoryViewer.tsx: Replace Firestore updateDoc (viewers, reactions) with supabase .update(). Replace addDoc/getDocs for conversations and messages with supabase .from('conversations')/.from('messages').",
+    "Migrate src/components/layout/AppShell.tsx: Replace Firestore onSnapshot listeners for notifications and unread_counts with supabase real-time subscriptions using supabase.channel().",
+    "Migrate src/pages/Discover.tsx: Replace useInfiniteFirestore with useInfiniteSupabase for profiles. Replace Firestore getDocs for trending posts with supabase.from('posts'). Replace setDoc/deleteDoc for follows with supabase .insert()/.delete().",
+    "Migrate src/hooks/useCoinBalance.ts: Replace Firestore getDoc and onSnapshot on 'wallets' with supabase.from('wallets').select() and supabase channel real-time subscription.",
+    "Migrate src/hooks/useTipSend.ts: Replace Firestore runTransaction (wallets, transactions) with supabase RPC call or sequential updates. Note: For production security, this should use a server-side function, but the migration should use supabase.rpc('transfer_tip', ...) or direct table operations matching what exists.",
+    "Migrate src/hooks/useWalletLedger.ts: Replace all Firestore queries (coin_transactions, tips, live_gifts, post_unlocks, creator_payout_requests, coin_purchases) with supabase.from() equivalents.",
+    "Migrate src/hooks/useCreatorAnalytics.ts: Replace Firestore queries on posts, follows, transactions with supabase.from() calls. Remove Timestamp import and usage.",
+    "Migrate src/hooks/useUserRole.ts: Replace Firestore getDoc on profiles with supabase.from('profiles').select('is_admin, is_moderator').",
+    "Migrate src/components/wallet/BuyCoinsSheet.tsx: Replace Firestore getDocs for payment_settings, addDoc/updateDoc for coin_purchases with supabase equivalents.",
+    "Migrate src/components/creator/BecomeCreatorSheet.tsx: Replace Firestore getDoc/updateDoc on profiles and config with supabase equivalents.",
+    "Remove src/hooks/useInfiniteFirestore.ts after all usages are replaced.",
+    "Run TypeScript check and build to confirm compilation"
+  ],
+  "acceptance_criteria": [
+    "No Firestore imports remain in any of the migrated files",
+    "No import of 'db' from '@/lib/firebase' in any migrated file",
+    "Real-time subscriptions use Supabase channels where previously using onSnapshot",
+    "useInfiniteFirestore.ts is deleted and Discover.tsx uses a Supabase-based alternative",
+    "bunx tsc --noEmit passes (no new errors)",
+    "bun run build succeeds",
+    "bun run test -- --run passes"
+  ],
+  "verification": [
+    "Run 'bunx tsc --noEmit' and confirm no new type errors",
+    "Run 'bun run build' and confirm build succeeds",
+    "Run 'bun run test -- --run' and confirm tests pass"
+  ],
+  "blocked_reason": null,
+  "findings": "Feed.tsx and Reels.tsx also imported useInfiniteFirestore and had to be migrated (not in original plan). Test runner has 7 pre-existing vitest/bun internal errors (ReferenceError: Cannot access listeners before initialization) that exist on base state. Build succeeds. TypeScript check passes with no errors. The 1 actual test still passes."
+}

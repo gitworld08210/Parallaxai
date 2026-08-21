@@ -1,21 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createLocalTracks, Track, LocalVideoTrack, LocalAudioTrack } from "livekit-client";
-import {
-  addDoc,
-  collection,
-  doc,
-  getDocs,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-  orderBy,
-  limit,
-  Timestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 
 import { Button } from "@/components/ui/button";
@@ -52,15 +38,14 @@ export default function LiveHost() {
   const [catalog, setCatalog] = useState<Record<string, { icon: string; name: string }>>({});
   const [flying, setFlying] = useState<{ id: string; icon: string; key: number }[]>([]);
 
-  // Load gift catalog from Firestore
+  // Load gift catalog
   useEffect(() => {
     (async () => {
       try {
-        const snap = await getDocs(collection(db, "gift_catalog"));
+        const { data } = await supabase.from('gift_catalog').select('*');
         const map: Record<string, { icon: string; name: string }> = {};
-        snap.docs.forEach((d) => {
-          const data = d.data();
-          map[d.id] = { icon: data.icon, name: data.name };
+        (data as any[] || []).forEach((d: any) => {
+          map[d.id] = { icon: d.icon, name: d.name };
         });
         setCatalog(map);
       } catch (e) {
@@ -133,9 +118,9 @@ export default function LiveHost() {
         if (t.kind === Track.Kind.Audio) audioTrackRef.current = t as LocalAudioTrack;
       }
 
-      // 2) Create the stream record in Firestore
+      // 2) Create the stream record
       const roomName = `live_${user.id}_${Date.now()}`;
-      const streamDoc = await addDoc(collection(db, "live_streams"), {
+      const { data: streamDoc, error: streamErr } = await supabase.from('live_streams').insert({
         host_id: user.id,
         title: title || null,
         status: "live",
@@ -145,9 +130,10 @@ export default function LiveHost() {
         allow_gifts: allowGifts,
         viewer_count: 0,
         total_gifts: 0,
-        started_at: serverTimestamp(),
-      });
-      setStreamId(streamDoc.id);
+        started_at: new Date().toISOString(),
+      } as any).select().single();
+      if (streamErr) throw streamErr;
+      setStreamId((streamDoc as any).id);
 
       // 3) Try LiveKit token (graceful fallback if unavailable)
       try {
@@ -186,68 +172,64 @@ export default function LiveHost() {
     try {
       stopLocalTracks();
       if (streamId) {
-        await updateDoc(doc(db, "live_streams", streamId), {
+        await supabase.from('live_streams').update({
           status: "ended",
-          ended_at: serverTimestamp(),
-        });
+          ended_at: new Date().toISOString(),
+        } as any).eq('id', streamId);
       }
     } finally {
       navigate(-1);
     }
   };
 
-  // Real-time chat and gifts via Firestore onSnapshot
+  // Real-time chat and gifts via Supabase
   useEffect(() => {
     if (!streamId) return;
-    const unsubs: (() => void)[] = [];
+    const channels: any[] = [];
 
-    // Chat listener
-    const chatQ = query(
-      collection(db, "live_chat"),
-      where("stream_id", "==", streamId),
-      orderBy("created_at", "asc"),
-      limit(100)
-    );
-    unsubs.push(
-      onSnapshot(chatQ, (snap) => {
-        const msgs: ChatRow[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as ChatRow[];
-        setChat(msgs.slice(-50));
+    // Initial chat fetch
+    (async () => {
+      const { data } = await supabase.from('live_chat').select('*').eq('stream_id', streamId).order('created_at', { ascending: true }).limit(100);
+      if (data) setChat((data as any[]).slice(-50));
+    })();
+
+    const chatChannel = supabase.channel(`live-chat-${streamId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_chat', filter: `stream_id=eq.${streamId}` }, (payload) => {
+        setChat(prev => [...prev, payload.new as any].slice(-50));
       })
-    );
+      .subscribe();
+    channels.push(chatChannel);
 
-    // Gifts listener
-    const giftsQ = query(
-      collection(db, "live_gifts"),
-      where("stream_id", "==", streamId),
-      orderBy("created_at", "desc"),
-      limit(20)
-    );
-    unsubs.push(
-      onSnapshot(giftsQ, (snap) => {
-        const allGifts: GiftRow[] = snap.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        })) as GiftRow[];
+    // Initial gifts fetch
+    (async () => {
+      const { data } = await supabase.from('live_gifts').select('*').eq('stream_id', streamId).order('created_at', { ascending: false }).limit(20);
+      if (data) {
+        const allGifts = data as any[];
         setRecentGifts(allGifts.slice(0, 6));
-        const totalCoins = allGifts.reduce((sum, g) => sum + Number(g.coins_total || 0), 0);
+        const totalCoins = allGifts.reduce((sum: number, g: any) => sum + Number(g.coins_total || 0), 0);
         setTips(totalCoins);
+      }
+    })();
+
+    const giftsChannel = supabase.channel(`live-gifts-${streamId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_gifts', filter: `stream_id=eq.${streamId}` }, (payload) => {
+        const g = payload.new as any;
+        setRecentGifts(prev => [g, ...prev].slice(0, 6));
+        setTips(prev => prev + Number(g.coins_total || 0));
       })
-    );
+      .subscribe();
+    channels.push(giftsChannel);
 
     // Stream doc listener (for viewer count updates)
-    unsubs.push(
-      onSnapshot(doc(db, "live_streams", streamId), (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          setViewers(data.viewer_count || 0);
-        }
+    const streamChannel = supabase.channel(`live-stream-${streamId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_streams', filter: `id=eq.${streamId}` }, (payload) => {
+        const data = payload.new as any;
+        setViewers(data.viewer_count || 0);
       })
-    );
+      .subscribe();
+    channels.push(streamChannel);
 
-    return () => unsubs.forEach((u) => u());
+    return () => channels.forEach((ch) => supabase.removeChannel(ch));
   }, [streamId]);
 
   useEffect(() => {

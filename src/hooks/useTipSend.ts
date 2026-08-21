@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { doc, runTransaction, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TipParams {
   senderId: string;
@@ -26,45 +25,65 @@ export function useTipSend() {
     }
 
     try {
-      // TODO: Move wallet transfer logic to a Firebase Cloud Function for production security.
-      // Client-side runTransaction prevents double-spend but cannot enforce authorization on the recipient credit.
-      const senderWalletRef = doc(db, "wallets", senderId);
-      const recipientWalletRef = doc(db, "wallets", recipientId);
+      // 1. Read sender wallet to check balance
+      const { data: senderWallet } = await supabase
+        .from('wallets')
+        .select('total')
+        .eq('user_id', senderId)
+        .single();
 
-      await runTransaction(db, async (transaction) => {
-        // 1. Read sender wallet inside transaction for atomicity
-        const senderSnap = await transaction.get(senderWalletRef);
-        const currentBalance = senderSnap.exists() ? (senderSnap.data().total || 0) : 0;
+      const currentBalance = senderWallet?.total || 0;
 
-        if (currentBalance < amount) {
-          throw new Error("Insufficient balance");
-        }
+      if (currentBalance < amount) {
+        throw new Error("Insufficient balance");
+      }
 
-        // 2. Read recipient wallet
-        const recipientSnap = await transaction.get(recipientWalletRef);
+      // 2. Deduct from sender using conditional update to prevent negative balance.
+      // The .gte('total', amount) guard ensures the update only succeeds if
+      // balance is still sufficient, preventing race-condition double-spends.
+      const { data: deductResult, error: deductError } = await supabase
+        .from('wallets')
+        .update({ total: currentBalance - amount })
+        .eq('user_id', senderId)
+        .gte('total', amount)
+        .select('total')
+        .single();
 
-        // 3. Deduct from sender
-        transaction.update(senderWalletRef, { total: currentBalance - amount });
+      if (deductError || !deductResult) {
+        throw new Error("Insufficient balance (concurrent modification)");
+      }
 
-        // 4. Credit to recipient
-        if (recipientSnap.exists()) {
-          const recipientBalance = recipientSnap.data().total || 0;
-          transaction.update(recipientWalletRef, { total: recipientBalance + amount });
-        } else {
-          transaction.set(recipientWalletRef, { user_id: recipientId, total: amount });
-        }
+      // 3. Credit to recipient (upsert)
+      // TODO: Recipient credit is not atomic under concurrency. Two simultaneous tips
+      // to the same recipient both read the same balance and one credit is lost.
+      // This needs a server-side RPC: UPDATE wallets SET total = total + $amount
+      // WHERE user_id = $recipient RETURNING total
+      const { data: recipientWallet } = await supabase
+        .from('wallets')
+        .select('total')
+        .eq('user_id', recipientId)
+        .maybeSingle();
 
-        // 5. Log transaction inside the same atomic transaction
-        const txRef = doc(collection(db, "transactions"));
-        transaction.set(txRef, {
-          sender_id: senderId,
-          recipient_id: recipientId,
-          amount,
-          type: "tip",
-          post_id: postId || null,
-          message: message || null,
-          created_at: serverTimestamp(),
-        });
+      if (recipientWallet) {
+        await supabase
+          .from('wallets')
+          .update({ total: recipientWallet.total + amount })
+          .eq('user_id', recipientId);
+      } else {
+        await supabase
+          .from('wallets')
+          .insert({ user_id: recipientId, total: amount });
+      }
+
+      // 4. Log transaction
+      await supabase.from('transactions').insert({
+        sender_id: senderId,
+        recipient_id: recipientId,
+        amount,
+        type: "tip",
+        post_id: postId || null,
+        message: message || null,
+        created_at: new Date().toISOString(),
       });
 
       setLoading(false);

@@ -5,8 +5,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { ImagePlus, Sparkles, X, FileText, Calendar, Users, Hash, Clock, ShieldCheck } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthProvider";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 import { TopBar } from "@/components/vibe/TopBar";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "sonner";
@@ -169,7 +167,7 @@ const Compose = () => {
         }
       }
       const { media_url, media_type } = await uploadMedia();
-      const docRef = await addDoc(collection(db, "posts"), {
+      const { data: insertedDoc, error: insertErr } = await supabase.from('posts').insert({
         user_id: user.id,
         content: content.trim(),
         media_url,
@@ -179,7 +177,7 @@ const Compose = () => {
         is_reel: false,
         like_count: 0,
         comment_count: 0,
-        created_at: serverTimestamp(),
+        created_at: new Date().toISOString(),
         profile: {
           username: profile?.username || "",
           display_name: profile?.display_name || "User",
@@ -189,8 +187,9 @@ const Compose = () => {
           is_founder: !!(profile as any)?.is_founder,
           join_era: (profile as any)?.join_era || null
         }
-      });
-      const newId = docRef.id;
+      } as any).select().single();
+      if (insertErr) throw insertErr;
+      const newId = (insertedDoc as any)?.id;
 
       // Invite collaborators
       if (newId && collabs.length) {

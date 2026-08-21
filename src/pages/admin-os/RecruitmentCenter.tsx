@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { TopBar } from "@/components/vibe/TopBar";
 import { useAuth } from "@/contexts/AuthProvider";
-import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { Briefcase, UserPlus, Clock, AlertCircle, Search, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { Link } from "react-router-dom";
@@ -13,12 +12,12 @@ const RecruitmentCenter = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "onboarding_sessions"), orderBy("created_at", "desc"));
-    const unsub = onSnapshot(q, (snap) => {
-      setSessions(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    const fetchSessions = async () => {
+      const { data } = await supabase.from('onboarding_sessions').select('*').order('created_at', { ascending: false });
+      if (data) setSessions(data as any[]);
       setLoading(false);
-    });
-    return () => unsub();
+    };
+    fetchSessions();
   }, []);
 
   return (

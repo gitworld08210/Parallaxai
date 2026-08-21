@@ -36,15 +36,6 @@ export default defineConfig(({ mode }) => ({
             if (id.includes('@radix-ui') || id.includes('framer-motion') || id.includes('class-variance-authority') || id.includes('clsx') || id.includes('tailwind-merge')) {
               return 'vendor-ui';
             }
-            if (id.includes('firebase')) {
-              if (id.includes('firebase/auth') || id.includes('@firebase/auth')) {
-                return 'vendor-firebase-auth';
-              }
-              if (id.includes('firebase/storage') || id.includes('@firebase/storage')) {
-                return 'vendor-firebase-storage';
-              }
-              return 'vendor-firebase';
-            }
             if (id.includes('recharts')) {
               return 'vendor-charts';
             }

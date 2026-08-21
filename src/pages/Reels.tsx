@@ -3,9 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Heart, MessageCircle, Send, Plus, Volume2, VolumeX, Pause, Camera, Search, Music2, Bookmark, MoreHorizontal, AlertCircle, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { collection, query, where, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useInfiniteFirestore } from "@/hooks/useInfiniteFirestore";
+import { useInfiniteSupabase } from "@/hooks/useInfiniteSupabase";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 import { useAuth } from "@/contexts/AuthProvider";
@@ -48,21 +46,18 @@ const Reels = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const dimTimer = useRef<number | null>(null);
 
-  // Cursor-based infinite scroll for reels
-  const reelsQuery = useMemo(
-    () =>
-      query(
-        collection(db, "posts"),
-        where("is_reel", "==", true),
-        where("status", "==", "published"),
-        orderBy("created_at", "desc")
-      ),
-    []
-  );
-  const { data: reelsData, loading: reelsLoading, hasMore, loadMore } = useInfiniteFirestore<Reel>(
-    reelsQuery,
-    { pageSize: 10 }
-  );
+  // Cursor-based infinite scroll for reels using Supabase
+  const { data: reelsData, loading: reelsLoading, hasMore, loadMore } = useInfiniteSupabase<Reel>({
+    table: "posts",
+    select: "*",
+    filters: [
+      { column: "is_reel", operator: "eq", value: true },
+      { column: "status", operator: "eq", value: "published" },
+    ],
+    orderBy: { column: "created_at", ascending: false },
+    pageSize: 10,
+  });
+
   const [reels, setReels] = useState<Reel[]>([]);
 
   // Initial load
@@ -393,7 +388,7 @@ const ReelItem = ({
         {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
       </button>
 
-      {/* Right action rail — TikTok style */}
+      {/* Right action rail */}
       <div
         className={cn(
           "absolute right-2.5 bottom-28 flex flex-col items-center gap-4 transition-opacity duration-500 z-20",

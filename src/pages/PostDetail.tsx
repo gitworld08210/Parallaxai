@@ -3,8 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ChevronLeft, MoreHorizontal } from "lucide-react";
 import { PostCard, FeedPost } from "@/components/social/PostCard";
 import { CommentSheet } from "@/components/social/CommentSheet";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 import { useAuth } from "@/contexts/AuthProvider";
 
@@ -18,17 +17,15 @@ const PostDetail = () => {
   useEffect(() => {
     if (!postId) return;
     (async () => {
-      const docRef = doc(db, "posts", postId);
-      const snap = await getDoc(docRef);
-      if (!snap.exists()) return;
-      const data = { id: snap.id, ...snap.data() };
+      const { data: postData } = await supabase.from('posts').select('*').eq('id', postId).single();
+      if (!postData) return;
+      const data = postData as any;
       let liked = false;
       if (user) {
-        const { doc: likeDoc, getDoc: getLikeDoc } = await import("firebase/firestore");
-        const likeSnap = await getLikeDoc(likeDoc(db, "posts", postId, "likes", user.id));
-        liked = likeSnap.exists();
+        const { data: likeData } = await supabase.from('likes').select('id').eq('post_id', postId).eq('user_id', user.id).maybeSingle();
+        liked = !!likeData;
       }
-      setPost({ ...(data as any), liked });
+      setPost({ ...data, liked });
     })();
   }, [postId, user?.id]);
 

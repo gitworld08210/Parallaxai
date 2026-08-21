@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { auth, db, googleProvider } from "@/lib/firebase";
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signInWithPopup,
-} from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { toast } from "sonner";
 import { Sparkles, ArrowLeft, Mail, Lock, User, Briefcase, ChevronRight } from "lucide-react";
@@ -59,15 +53,19 @@ const Auth = () => {
 
       let prof: any = null;
       try {
-        const profSnap = await getDoc(doc(db, "profiles", uid));
-        prof = profSnap.exists() ? profSnap.data() : null;
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("user_id", uid)
+          .maybeSingle();
+        if (!error && data) prof = data;
       } catch (e) {
         console.error("Error fetching profile during routing:", e);
       }
 
       localStorage.removeItem(ORG_INTENT_KEY);
 
-      // Profile is created during signup — only fall back if it's genuinely missing
+      // Profile is created during signup - only fall back if it's genuinely missing
       if (!prof?.display_name && !prof?.username) {
         nav("/profile-creation", { replace: true });
         return;
@@ -95,14 +93,10 @@ const Auth = () => {
   };
 
   const writeProfile = async (uid: string, data: Record<string, any>, username: string) => {
-    await setDoc(doc(db, "profiles", uid), data, { merge: true });
-    try {
-      await setDoc(doc(db, "usernames", username), {
-        user_id: uid, uid, updated_at: serverTimestamp(),
-      }, { merge: true });
-    } catch (e) {
-      console.warn("Username index skipped:", e);
-    }
+    await supabase.from("profiles").upsert({
+      user_id: uid,
+      ...data,
+    });
   };
 
   const handleAuth = async (formData: LoginFormData | SignupFormData) => {
@@ -113,12 +107,15 @@ const Auth = () => {
     setBusy(true);
     try {
       if (tab === "signin") {
-        const res = await signInWithEmailAndPassword(auth, email.trim(), password);
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+        if (error) throw error;
         toast.success("Logged in");
-        if (res.user) await routeForUser(res.user.uid);
+        if (data.user) await routeForUser(data.user.id);
       } else {
         if (kind === "organization") localStorage.setItem(ORG_INTENT_KEY, "organization");
-        const res = await createUserWithEmailAndPassword(auth, email.trim(), password);
 
         const displayName = name.trim();
         const username = buildUsername(
@@ -126,25 +123,36 @@ const Auth = () => {
           displayName || email.trim().split("@")[0]
         );
 
-        // Profile is fully created as part of signup
-        await writeProfile(res.user.uid, {
-          id: res.user.uid,
-          user_id: res.user.uid,
+        const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
-          display_name: displayName,
-          username,
-          bio: "",
-          account_type: kind,
-          onboarded_at: serverTimestamp(),
-          created_at: serverTimestamp(),
-          followers_count: 0,
-          following_count: 0,
-          posts_count: 0,
-          verified: false,
-        }, username);
+          password,
+          options: {
+            data: { display_name: displayName },
+          },
+        });
+        if (error) throw error;
 
-        toast.success("Account created");
-        await routeForUser(res.user.uid);
+        if (data.user) {
+          // Profile is fully created as part of signup
+          await writeProfile(data.user.id, {
+            id: data.user.id,
+            user_id: data.user.id,
+            email: email.trim(),
+            display_name: displayName,
+            username,
+            bio: "",
+            account_type: kind,
+            onboarded_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            followers_count: 0,
+            following_count: 0,
+            posts_count: 0,
+            verified: false,
+          }, username);
+
+          toast.success("Account created");
+          await routeForUser(data.user.id);
+        }
       }
     } catch (e: any) {
       toast.error(e?.message || "Authentication failed");
@@ -155,44 +163,17 @@ const Auth = () => {
     setBusy(true);
     try {
       if (tab === "signup" && kind === "organization") localStorage.setItem(ORG_INTENT_KEY, "organization");
-      const res = await signInWithPopup(auth, googleProvider);
       
-      const profSnap = await getDoc(doc(db, "profiles", res.user.uid));
-      if (!profSnap.exists()) {
-        const uid = res.user.uid;
-        const email = res.user.email;
-        const name = res.user.displayName || email?.split('@')[0] || "User";
-        const baseUsername = email?.split('@')[0] || uid.slice(0, 8);
-        const finalUsername = `${baseUsername}${Math.floor(1000 + Math.random() * 9000)}`;
-        
-        await setDoc(doc(db, "profiles", uid), {
-          id: uid,
-          user_id: uid,
-          email,
-          display_name: name,
-          username: finalUsername,
-          account_type: kind,
-          avatar_url: res.user.photoURL,
-          onboarded_at: serverTimestamp(),
-          created_at: serverTimestamp(),
-          followers_count: 0,
-          following_count: 0,
-          posts_count: 0,
-          verified: false
-        });
-
-        try {
-          await setDoc(doc(db, "usernames", finalUsername), {
-            user_id: uid,
-            uid,
-            updated_at: serverTimestamp()
-          }, { merge: true });
-        } catch (idxErr) {
-          console.warn("Username index skipped:", idxErr);
-        }
-      }
-      toast.success("Signed in with Google");
-      await routeForUser(res.user.uid);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+      
+      if (error) throw error;
+      // Google OAuth via Supabase uses redirect flow.
+      // After redirect, onAuthStateChange in AuthProvider will fire with the session.
     } catch (e: any) {
       toast.error(e?.message || "Google sign-in failed");
     } finally { setBusy(false); }
@@ -347,7 +328,7 @@ const Auth = () => {
       </div>
       
       <div className="absolute bottom-8 text-[10px] font-bold text-zinc-800 tracking-tighter uppercase select-none">
-        © 2026 Parallax Universe • All Rights Reserved
+        &copy; 2026 Parallax Universe &bull; All Rights Reserved
       </div>
     </div>
   );

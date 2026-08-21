@@ -4,9 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Loader2, LogIn, Plus, X, Eye, EyeOff } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import {
   MAX_ACCOUNTS,
@@ -45,8 +43,8 @@ export const AccountSwitcherSheet = ({
       username: profile?.username ?? null,
       displayName: profile?.display_name ?? null,
       avatarUrl: profile?.avatar_url ?? null,
-      accessToken: "managed-by-firebase",
-      refreshToken: "managed-by-firebase",
+      accessToken: "managed-by-supabase",
+      refreshToken: "managed-by-supabase",
       updatedAt: Date.now(),
     });
     setAccounts(loadSavedAccounts());
@@ -76,7 +74,7 @@ export const AccountSwitcherSheet = ({
       onOpenChange(false);
       return;
     }
-    // With Firebase, we show the login form for account switching
+    // With Supabase, we show the login form for account switching
     setEmail(acc.email || "");
     setShowLogin(true);
   };
@@ -94,24 +92,38 @@ export const AccountSwitcherSheet = ({
     }
     setBusy("login");
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, pw);
-      const firebaseUser = userCredential.user;
-      
-      if (firebaseUser) {
-        const profileSnap = await getDoc(doc(db, "profiles", firebaseUser.uid));
-        const prof = profileSnap.exists() ? profileSnap.data() : null;
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password: pw,
+      });
+
+      if (error) throw error;
+
+      const supaUser = data.user;
+      if (supaUser) {
+        let prof: any = null;
+        try {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("user_id", supaUser.id)
+            .maybeSingle();
+          prof = profileData;
+        } catch (e) {
+          console.error("Error fetching profile:", e);
+        }
 
         upsertSavedAccount({
-          userId: firebaseUser.uid,
-          email: firebaseUser.email ?? email,
+          userId: supaUser.id,
+          email: supaUser.email ?? email,
           username: prof?.username ?? null,
           displayName: prof?.display_name ?? null,
           avatarUrl: prof?.avatar_url ?? null,
-          accessToken: "firebase-token",
-          refreshToken: "firebase-token",
+          accessToken: "supabase-token",
+          refreshToken: "supabase-token",
           updatedAt: Date.now(),
         });
-        toast.success("Account added ✦");
+        toast.success("Account added");
         setEmail("");
         setPw("");
         setShowLogin(false);

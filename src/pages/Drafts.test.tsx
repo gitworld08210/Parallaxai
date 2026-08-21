@@ -3,22 +3,8 @@ import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // Mock Firebase
-vi.mock("@/lib/firebase", () => ({
-  db: {},
-  auth: {},
-}));
 
 // Mock Firebase Firestore
-vi.mock("firebase/firestore", () => ({
-  collection: vi.fn(),
-  query: vi.fn(),
-  where: vi.fn(),
-  orderBy: vi.fn(),
-  getDocs: vi.fn().mockResolvedValue({ docs: [] }),
-  updateDoc: vi.fn().mockResolvedValue(undefined),
-  deleteDoc: vi.fn().mockResolvedValue(undefined),
-  doc: vi.fn(),
-}));
 
 // Mock auth context
 vi.mock("@/contexts/AuthProvider", () => ({

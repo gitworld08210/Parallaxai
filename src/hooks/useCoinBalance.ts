@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthProvider";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useCoinBalance() {
   const { user } = useAuth();
@@ -12,12 +11,16 @@ export function useCoinBalance() {
     if (!user) { setBalance(0); setLoading(false); return; }
     
     try {
-      const snap = await getDoc(doc(db, "wallets", user.id));
-      if (snap.exists()) {
-        setBalance(snap.data().total || 0);
+      const { data } = await supabase
+        .from('wallets')
+        .select('total')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data) {
+        setBalance((data as any).total || 0);
       }
     } catch (e) {
-      console.warn("Firestore wallet fetch failed", e);
+      console.warn("Supabase wallet fetch failed", e);
     } finally {
       setLoading(false);
     }
@@ -27,12 +30,23 @@ export function useCoinBalance() {
 
   useEffect(() => {
     if (!user) return;
-    const unsubscribe = onSnapshot(doc(db, "wallets", user.id), (snap) => {
-      if (snap.exists()) {
-        setBalance(snap.data().total || 0);
-      }
-    });
-    return () => unsubscribe();
+
+    const channel = supabase
+      .channel('wallets-' + user.id)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'wallets', filter: 'user_id=eq.' + user.id },
+        (payload) => {
+          if (payload.new) {
+            setBalance((payload.new as any).total || 0);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id]);
 
   return { balance, loading, refresh };

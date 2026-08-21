@@ -5,8 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Coins, Copy, Check, ExternalLink, Loader2, ShieldCheck } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthProvider";
-import { collection, query, limit, getDocs, addDoc, doc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface Pack { coins: number; inr: number; badge?: string }
@@ -34,9 +33,13 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
     if (!open) return;
     (async () => {
       try {
-        const snap = await getDocs(query(collection(db, "payment_settings"), limit(1)));
-        if (!snap.empty) {
-          const row: any = snap.docs[0].data();
+        const { data } = await supabase
+          .from('payment_settings')
+          .select('*')
+          .limit(1)
+          .maybeSingle();
+        if (data) {
+          const row = data as any;
           setPay({ upi: row?.upi_id || "", qr: row?.qr_url || "", payee: row?.payee_name || "Aurelix" });
         }
       } catch (e) {
@@ -54,19 +57,24 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
     setLoading(true);
     try {
       const packIndex = PACKS.indexOf(pack);
-      const docRef = await addDoc(collection(db, "coin_purchases"), {
-        user_id: user.id,
-        package_id: `pack_${packIndex}`,
-        amount_inr: pack.inr,
-        coins: pack.coins,
-        utr_number: null,
-        status: "pending",
-        admin_note: null,
-        created_at: serverTimestamp(),
-        approved_at: null,
-        approved_by: null,
-      });
-      setTopupId(docRef.id);
+      const { data: newDoc, error } = await supabase
+        .from('coin_purchases')
+        .insert({
+          user_id: user.id,
+          package_id: `pack_${packIndex}`,
+          amount_inr: pack.inr,
+          coins: pack.coins,
+          utr_number: null,
+          status: "pending",
+          admin_note: null,
+          created_at: new Date().toISOString(),
+          approved_at: null,
+          approved_by: null,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      setTopupId((newDoc as any).id);
       setStep("pay");
     } catch (e: any) {
       toast.error(e.message || "Failed");
@@ -81,10 +89,14 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
     if (!/^[0-9]{12}$/.test(cleaned)) return toast.error("Enter your 12-digit UPI UTR");
     setLoading(true);
     try {
-      await updateDoc(doc(db, "coin_purchases", topupId), {
-        utr_number: cleaned,
-        status: "submitted",
-      });
+      const { error } = await supabase
+        .from('coin_purchases')
+        .update({
+          utr_number: cleaned,
+          status: "submitted",
+        })
+        .eq('id', topupId);
+      if (error) throw error;
       setStep("done");
     } catch (e: any) {
       toast.error(e.message || "Action failed");
@@ -122,16 +134,16 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
                       <Coins className="h-4 w-4 text-aura" />
                       <span className="font-display text-2xl font-bold">{p.coins.toLocaleString("en-IN")}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">₹{p.inr}</p>
+                    <p className="text-xs text-muted-foreground mt-1">{p.inr}</p>
                   </button>
                 );
               })}
             </div>
             <p className="text-[11px] text-muted-foreground text-center flex items-center justify-center gap-1">
-              <ShieldCheck className="h-3 w-3" /> Manual UPI verification · coins credited after review
+              <ShieldCheck className="h-3 w-3" /> Manual UPI verification - coins credited after review
             </p>
             <Button onClick={startPay} disabled={loading} className="w-full" size="lg">
-              {loading ? "Preparing…" : `Continue · ₹${pack.inr}`}
+              {loading ? "Preparing..." : `Continue - ${pack.inr}`}
             </Button>
           </div>
         )}
@@ -140,7 +152,7 @@ export function BuyCoinsSheet({ open, onOpenChange }: Props) {
           <div className="space-y-4 py-4">
             <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-card to-accent/10 p-5 text-center border border-primary/20">
               <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Pay exactly</p>
-              <p className="font-display text-4xl font-bold">₹{pack.inr}</p>
+              <p className="font-display text-4xl font-bold">{pack.inr}</p>
               <p className="text-xs text-muted-foreground">to {pay.payee} for {pack.coins.toLocaleString("en-IN")} coins</p>
             </div>
 

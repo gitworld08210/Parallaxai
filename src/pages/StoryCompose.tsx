@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { ImagePlus, X, Globe, Star, BarChart3, MessageSquare, Plus, Trash2, Music, Wand2 } from "lucide-react";
 
 import { useAuth } from "@/contexts/AuthProvider";
@@ -77,12 +76,12 @@ const StoryCompose = () => {
     setBusy(true);
     try {
       const url = await uploadToCloudinary(file);
-      const storyRef = await addDoc(collection(db, "stories"), {
+      const { data: storyDoc, error: storyErr } = await supabase.from('stories').insert({
         user_id: user.id,
         media_url: url,
         media_type: file.type.startsWith("video") ? "video" : "image",
         audience,
-        created_at: serverTimestamp(),
+        created_at: new Date().toISOString(),
         expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         viewers: [],
         reactions: [],
@@ -91,23 +90,23 @@ const StoryCompose = () => {
           display_name: profile?.display_name || "",
           avatar_url: profile?.avatar_url || null,
         },
-      });
+      } as any).select().single();
+      if (storyErr) throw storyErr;
+      const storyId = (storyDoc as any)?.id;
 
-      if (stickers.length && storyRef.id) {
-        const stickerPromises = stickers.map((s) =>
-          addDoc(collection(db, "story_stickers"), {
-            story_id: storyRef.id,
-            kind: s.kind,
-            position: { x: s.x, y: s.y },
-            payload:
-              s.kind === "poll"
-                ? { question: s.question, options: s.options }
-                : s.kind === "qa"
-                ? { prompt: s.prompt }
-                : { title: s.title },
-          })
-        );
-        await Promise.all(stickerPromises);
+      if (stickers.length && storyId) {
+        const stickerRows = stickers.map((s) => ({
+          story_id: storyId,
+          kind: s.kind,
+          position: { x: s.x, y: s.y },
+          payload:
+            s.kind === "poll"
+              ? { question: s.question, options: s.options }
+              : s.kind === "qa"
+              ? { prompt: s.prompt }
+              : { title: s.title },
+        }));
+        await supabase.from('story_stickers').insert(stickerRows as any);
       }
       toast.success("Story added \u2726 \u00b7 expires in 24h");
       nav("/");

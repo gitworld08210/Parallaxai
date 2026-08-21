@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { TopBar } from "@/components/vibe/TopBar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/contexts/AuthProvider";
-import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, serverTimestamp, getDoc, runTransaction } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   ShieldCheck, 
   Coins, 
@@ -29,76 +28,119 @@ const ApprovalsInbox = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Finance Queue (Coin Top-ups)
-    const qFinance = query(collection(db, "coin_topups"), orderBy("created_at", "desc"));
-    const unsubFinance = onSnapshot(qFinance, (snap) => {
-      setTopups(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    // Initial fetch
+    const fetchData = async () => {
+      const [topupRes, verifRes, kycRes] = await Promise.all([
+        supabase.from('coin_topups').select('*').order('created_at', { ascending: false }),
+        supabase.from('verification_requests').select('*').order('created_at', { ascending: false }),
+        supabase.from('virtual_world_applications').select('*').order('created_at', { ascending: false }),
+      ]);
+      if (topupRes.data) setTopups(topupRes.data as any[]);
+      if (verifRes.data) setVerifications(verifRes.data as any[]);
+      if (kycRes.data) setKycRequests(kycRes.data as any[]);
+      setLoading(false);
+    };
+    fetchData();
 
-    // 2. Trust & Safety Queue (Verifications)
-    const qVerif = query(collection(db, "verification_requests"), orderBy("created_at", "desc"));
-    const unsubVerif = onSnapshot(qVerif, (snap) => {
-      setVerifications(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    // Real-time subscriptions
+    const topupChannel = supabase.channel('admin-topups')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'coin_topups' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setTopups(prev => [payload.new as any, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setTopups(prev => prev.map(t => t.id === (payload.new as any).id ? payload.new as any : t));
+        } else if (payload.eventType === 'DELETE') {
+          setTopups(prev => prev.filter(t => t.id !== (payload.old as any).id));
+        }
+      })
+      .subscribe();
 
-    // 3. KYC Queue (Virtual World)
-    const qKyc = query(collection(db, "virtual_world_applications"), orderBy("created_at", "desc"));
-    const unsubKyc = onSnapshot(qKyc, (snap) => {
-      setKycRequests(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
+    const verifChannel = supabase.channel('admin-verifications')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'verification_requests' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setVerifications(prev => [payload.new as any, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setVerifications(prev => prev.map(v => v.id === (payload.new as any).id ? payload.new as any : v));
+        } else if (payload.eventType === 'DELETE') {
+          setVerifications(prev => prev.filter(v => v.id !== (payload.old as any).id));
+        }
+      })
+      .subscribe();
 
-    setLoading(false);
-    return () => { unsubFinance(); unsubVerif(); unsubKyc(); };
+    const kycChannel = supabase.channel('admin-kyc')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'virtual_world_applications' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          setKycRequests(prev => [payload.new as any, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setKycRequests(prev => prev.map(k => k.id === (payload.new as any).id ? payload.new as any : k));
+        } else if (payload.eventType === 'DELETE') {
+          setKycRequests(prev => prev.filter(k => k.id !== (payload.old as any).id));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(topupChannel);
+      supabase.removeChannel(verifChannel);
+      supabase.removeChannel(kycChannel);
+    };
   }, []);
 
   const handleApproveTopup = async (topup: any) => {
     try {
-      await runTransaction(db, async (transaction) => {
-        const topupRef = doc(db, "coin_topups", topup.id);
-        const profileRef = doc(db, "profiles", topup.user_id);
-        
-        const profileSnap = await transaction.get(profileRef);
-        if (!profileSnap.exists()) throw new Error("User profile not found");
-        
-        const currentBalance = profileSnap.data().coin_balance || 0;
-        
-        transaction.update(topupRef, {
-          status: "approved",
-          approved_at: serverTimestamp(),
-          reviewer_id: user?.id
-        });
-        
-        transaction.update(profileRef, {
-          coin_balance: currentBalance + topup.coins,
-          last_transaction_at: serverTimestamp()
-        });
+      // 1. Update topup status
+      const { error: topupErr } = await supabase.from('coin_topups').update({
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+        reviewer_id: user?.id,
+      }).eq('id', topup.id);
+      if (topupErr) throw topupErr;
 
-        // Add to ledger
-        const ledgerRef = doc(collection(db, "ledger"));
-        transaction.set(ledgerRef, {
-          user_id: topup.user_id,
-          type: "credit",
-          amount: topup.coins,
-          source: "topup",
-          reference_id: topup.id,
-          label: "Coin Purchase Approved",
-          created_at: serverTimestamp()
-        });
+      // 2. Get current balance
+      // TODO: Profile coin_balance credit is not atomic under concurrency.
+      // If two topups for the same user are approved simultaneously, one credit could be lost.
+      // This needs a server-side RPC: UPDATE profiles SET coin_balance = coin_balance + $amount
+      // WHERE user_id = $recipient RETURNING coin_balance
+      const { data: profileData, error: profileFetchErr } = await supabase
+        .from('profiles')
+        .select('coin_balance')
+        .eq('user_id', topup.user_id)
+        .single();
+      if (profileFetchErr) throw profileFetchErr;
+
+      const currentBalance = (profileData as any)?.coin_balance || 0;
+
+      // 3. Update profile balance
+      const { error: profileErr } = await supabase.from('profiles').update({
+        coin_balance: currentBalance + topup.coins,
+        last_transaction_at: new Date().toISOString(),
+      } as any).eq('user_id', topup.user_id);
+      if (profileErr) throw profileErr;
+
+      // 4. Add to ledger
+      await supabase.from('ledger').insert({
+        user_id: topup.user_id,
+        kind: 'credit',
+        amount: topup.coins,
+        balance_after: currentBalance + topup.coins,
+        reference_id: topup.id,
+        created_at: new Date().toISOString(),
       });
-      
+
       toast.success(`Approved ${topup.coins} coins for user`);
     } catch (e: any) {
       toast.error(e.message);
     }
   };
 
-  const handleReject = async (collectionName: string, id: string) => {
+  const handleReject = async (tableName: string, id: string) => {
     try {
-      await updateDoc(doc(db, collectionName, id), {
-        status: "rejected",
-        reviewed_at: serverTimestamp(),
-        reviewer_id: user?.id
-      });
+      const { error } = await supabase.from(tableName as any).update({
+        status: 'rejected',
+        reviewed_at: new Date().toISOString(),
+        reviewer_id: user?.id,
+      } as any).eq('id', id);
+      if (error) throw error;
       toast.success("Request rejected");
     } catch (e: any) {
       toast.error(e.message);
@@ -107,25 +149,23 @@ const ApprovalsInbox = () => {
 
   const handleApproveKyc = async (req: any) => {
     try {
-      await runTransaction(db, async (transaction) => {
-        const reqRef = doc(db, "virtual_world_applications", req.id);
-        const accessRef = doc(db, "virtual_world_access", req.user_id);
-        
-        transaction.update(reqRef, {
-          status: "approved",
-          approved_at: serverTimestamp(),
-          reviewer_id: user?.id
-        });
-        
-        transaction.set(accessRef, {
-          user_id: req.user_id,
-          is_active: true,
-          daily_limit: 25,
-          approved_at: serverTimestamp(),
-          reviewer_id: user?.id
-        });
-      });
-      
+      // 1. Update application status
+      const { error: reqErr } = await supabase.from('virtual_world_applications').update({
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+        reviewer_id: user?.id,
+      } as any).eq('id', req.id);
+      if (reqErr) throw reqErr;
+
+      // 2. Grant access
+      await supabase.from('virtual_world_access').upsert({
+        user_id: req.user_id,
+        is_active: true,
+        daily_limit: 25,
+        approved_at: new Date().toISOString(),
+        reviewer_id: user?.id,
+      } as any);
+
       toast.success(`Approved Virtual World access for ${req.full_name}`);
     } catch (e: any) {
       toast.error(e.message);
@@ -161,7 +201,7 @@ const ApprovalsInbox = () => {
                     <div>
                       <p className="text-sm font-bold">₹{topup.amount_inr} for {topup.coins} Coins</p>
                       <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                        UTR: {topup.utr} · {topup.created_at?.seconds ? format(new Date(topup.created_at.seconds * 1000), 'MMM d, HH:mm') : 'Recently'}
+                        UTR: {topup.utr} · {topup.created_at ? format(new Date(topup.created_at), 'MMM d, HH:mm') : 'Recently'}
                       </p>
                     </div>
                   </div>

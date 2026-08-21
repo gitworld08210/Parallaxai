@@ -12,10 +12,9 @@ import { EmptyState } from "@/components/empty/EmptyState";
 import { SideMenu } from "@/components/layout/SideMenu";
 import { AuraAvatar } from "@/components/vibe/AuraAvatar";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { collection, query as fsQuery, where, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { getInterestVector, scorePosts } from "@/services/interestEngine";
-import { useInfiniteFirestore } from "@/hooks/useInfiniteFirestore";
+import { useInfiniteSupabase } from "@/hooks/useInfiniteSupabase";
 
 import { useAuth } from "@/contexts/AuthProvider";
 import { gradientFor, initialsOf } from "@/lib/format";
@@ -30,21 +29,18 @@ const Feed = () => {
   const [rankedPosts, setRankedPosts] = useState<FeedPost[]>([]);
   const [commentPost, setCommentPost] = useState<string | null>(null);
 
-  // Build Firestore query for infinite scroll
-  const baseQuery = useMemo(() => {
-    if (!user) return null;
-    return fsQuery(
-      collection(db, "posts"),
-      where("status", "==", "published"),
-      where("is_reel", "==", false),
-      orderBy("created_at", "desc")
-    );
-  }, [user?.id]);
-
-  const { data: rawPosts, loading, hasMore, loadMore, refresh } = useInfiniteFirestore<FeedPost>(
-    baseQuery,
-    { pageSize: 10 }
-  );
+  // Supabase-based infinite scroll for posts
+  const { data: rawPosts, loading, hasMore, loadMore, refresh } = useInfiniteSupabase<FeedPost>({
+    table: "posts",
+    select: "*",
+    filters: [
+      { column: "status", operator: "eq", value: "published" },
+      { column: "is_reel", operator: "eq", value: false },
+    ],
+    orderBy: { column: "created_at", ascending: false },
+    pageSize: 10,
+    enabled: !!user,
+  });
 
   // Apply interest ranking for "foryou" tab
   useEffect(() => {
@@ -179,7 +175,7 @@ const Feed = () => {
           </div>
         </header>
 
-        {/* X-style tabs — animated underline with layoutId */}
+        {/* X-style tabs with animated underline */}
         <div role="tablist" className="grid grid-cols-2">
           {[
             { id: "foryou", label: t("feed.for_you") },
@@ -260,7 +256,7 @@ const Feed = () => {
         )}
       </section>
 
-      {/* Floating compose FAB — X-style */}
+      {/* Floating compose FAB */}
       <Link
         to="/compose"
         aria-label="Compose"

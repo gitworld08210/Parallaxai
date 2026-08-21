@@ -23,7 +23,7 @@ export const StoryStickersLayer = ({ storyId, isOwner, onPauseChange }: { storyI
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const { data: st } = await supabase.from("story_stickers" as any).select("*").eq("story_id", storyId);
+      const { data: st } = await supabase.from("story_stickers").select("*").eq("story_id", storyId);
       if (cancelled) return;
       setStickers((st ?? []) as any);
       const ids = ((st ?? []) as any[]).map((s) => s.id);

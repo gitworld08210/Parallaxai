@@ -83,10 +83,9 @@ const VirtualWorld = () => {
         uploadKycFile(user.uid, "selfie", selfie),
       ]);
 
-      const { collection, addDoc, serverTimestamp } = await import("firebase/firestore");
-      const { db } = await import("@/lib/firebase");
+      const { supabase: sb } = await import("@/integrations/supabase/client");
       
-      await addDoc(collection(db, "virtual_world_applications"), {
+      await sb.from('virtual_world_applications').insert({
         user_id: user.uid,
         full_name: fullName.trim(),
         aadhaar_number: digits,
@@ -96,8 +95,8 @@ const VirtualWorld = () => {
         contact_phone: phone.trim(),
         purpose: purpose.trim(),
         status: "pending",
-        created_at: serverTimestamp()
-      });
+        created_at: new Date().toISOString()
+      } as any);
 
       toast.success("Request sent to the Verification department");
       await refresh();

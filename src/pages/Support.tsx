@@ -66,25 +66,6 @@ const Support = () => {
     enabled: !!user?.id,
     queryKey: ["my-support-tickets", user?.id],
     queryFn: async () => {
-      try {
-        // 1. Check Firestore
-        const { collection, query, where, orderBy, limit, getDocs } = await import("firebase/firestore");
-        const { db } = await import("@/lib/firebase");
-        const q = query(
-          collection(db, "support_tickets"),
-          where("requester_id", "==", user!.id),
-          orderBy("created_at", "desc"),
-          limit(20)
-        );
-        const snap = await getDocs(q);
-        if (!snap.empty) {
-          return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        }
-      } catch (e) {
-        console.warn("Firestore support tickets fetch failed", e);
-      }
-
-      // 2. Supabase Fallback.
       const { data, error } = await supabase.from("sup_tickets" as any).select("id, ticket_number, subject, category, priority, status, created_at, owning_department_id").eq("requester_id", user!.id).order("created_at", { ascending: false }).limit(20);
       if (error) throw error;
       return data ?? [];
@@ -108,23 +89,13 @@ const Support = () => {
       };
 
       try {
-        // 1. Dual-write to Firestore
-        const { collection, addDoc, serverTimestamp } = await import("firebase/firestore");
-        const { db } = await import("@/lib/firebase");
-        await addDoc(collection(db, "support_tickets"), {
-          ...payload,
-          created_at: serverTimestamp(),
-          status: "open",
-          ticket_number: `SUP-${Math.floor(1000 + Math.random() * 9000)}`,
-        });
-      } catch (e) {
-        console.warn("Firestore ticket creation failed", e);
+        // Supabase Insert
+        const { data, error } = await supabase.rpc("create_support_ticket" as any, payload as any);
+        if (error) throw error;
+        return data as unknown as { ticket_number: string };
+      } catch (e: any) {
+        throw e;
       }
-
-      // 2. Supabase Insert (Legacy/Back-office)
-      const { data, error } = await supabase.rpc("create_support_ticket" as any, payload as any);
-      if (error) throw error;
-      return data as unknown as { ticket_number: string };
 
     },
     onSuccess: (d) => {

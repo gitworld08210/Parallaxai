@@ -5,8 +5,7 @@ import { timeAgo } from "@/lib/format";
 import { useAuth } from "@/contexts/AuthProvider";
 import { StoryStickersLayer } from "@/components/social/StoryStickersLayer";
 import { toast } from "sonner";
-import { collection, addDoc, query, where, getDocs, serverTimestamp, doc, updateDoc, arrayUnion } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 type Story = {
   id: string;
@@ -30,10 +29,23 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
   useEffect(() => {
     setProgress(0);
     // Track viewer
-    if (current && user?.uid && current.user_id !== user.uid) {
-      updateDoc(doc(db, "stories", current.id), {
-        viewers: arrayUnion(user.uid),
-      }).catch(() => {});
+    if (current && user?.id && current.user_id !== user.id) {
+      (async () => {
+        try {
+          const { data } = await supabase
+            .from('stories')
+            .select('viewers')
+            .eq('id', current.id)
+            .single();
+          const currentViewers: string[] = data?.viewers || [];
+          if (!currentViewers.includes(user.id)) {
+            await supabase
+              .from('stories')
+              .update({ viewers: [...currentViewers, user.id] })
+              .eq('id', current.id);
+          }
+        } catch {}
+      })();
     }
     if (paused) return;
     const duration = current?.media_type === "video" ? 12000 : 5000;
@@ -62,9 +74,16 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
   const react = async (emoji: string) => {
     if (!user) return toast.error("Sign in");
     try {
-      await updateDoc(doc(db, "stories", current.id), {
-        reactions: arrayUnion({ user_id: user.uid, emoji }),
-      });
+      const { data } = await supabase
+        .from('stories')
+        .select('reactions')
+        .eq('id', current.id)
+        .single();
+      const currentReactions: any[] = data?.reactions || [];
+      await supabase
+        .from('stories')
+        .update({ reactions: [...currentReactions, { user_id: user.id, emoji }] })
+        .eq('id', current.id);
       toast.success(`Reacted ${emoji}`);
     } catch (err: any) {
       toast.error(err.message || "Reaction failed");
@@ -73,24 +92,42 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
 
   const sendReply = async () => {
     if (!user || !reply.trim() || !current.profile) return;
-    if (current.user_id === user.uid) { toast.error("Can't reply to yourself"); return; }
+    if (current.user_id === user.id) { toast.error("Can't reply to yourself"); return; }
     try {
-      const convsRef = collection(db, "conversations");
-      const q1 = query(convsRef, where("member_ids", "array-contains", user.uid));
-      const snap = await getDocs(q1);
-      let convId = snap.docs.find((d) => (d.data().member_ids || []).includes(current.user_id))?.id ?? null;
-      if (!convId) {
-        const newConv = await addDoc(convsRef, {
-          member_ids: [user.uid, current.user_id],
-          created_at: serverTimestamp(),
-        });
-        convId = newConv.id;
+      // Find or create conversation
+      const { data: convs } = await supabase
+        .from('conversations')
+        .select('*')
+        .contains('member_ids', [user.id]);
+
+      let convId: string | null = null;
+      if (convs) {
+        const existing = (convs as any[]).find((c: any) =>
+          (c.member_ids || []).includes(current.user_id)
+        );
+        convId = existing?.id ?? null;
       }
+
+      if (!convId) {
+        const { data: newConv } = await supabase
+          .from('conversations')
+          .insert({
+            member_ids: [user.id, current.user_id],
+            created_at: new Date().toISOString(),
+          })
+          .select()
+          .single();
+        convId = (newConv as any)?.id ?? null;
+      }
+
+      if (!convId) throw new Error("Could not create conversation");
+
       const content = `↩️ Replied to story: ${reply.trim().slice(0, 500)}`;
-      await addDoc(collection(db, "conversations", convId, "messages"), {
-        sender_id: user.uid,
+      await supabase.from('messages').insert({
+        conversation_id: convId,
+        sender_id: user.id,
         content,
-        created_at: serverTimestamp(),
+        created_at: new Date().toISOString(),
       });
       setReply("");
       toast.success("Reply sent");
@@ -160,7 +197,7 @@ export const StoryViewer = ({ stories, startIdx, onClose }: { stories: Story[]; 
               onChange={(e) => setReply(e.target.value)}
               onFocus={() => setPaused(true)}
               onBlur={() => setPaused(false)}
-              placeholder={`Reply to ${current.profile?.username ?? "story"}…`}
+              placeholder={`Reply to ${current.profile?.username ?? "story"}...`}
               className="flex-1 bg-white/10 rounded-full px-4 py-2.5 text-sm outline-none placeholder:text-white/60 text-white"
             />
             <button onClick={sendReply} className="h-10 w-10 grid place-items-center rounded-full bg-white text-black">

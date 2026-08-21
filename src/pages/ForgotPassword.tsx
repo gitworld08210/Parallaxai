@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { auth } from "@/lib/firebase";
-import { sendPasswordResetEmail } from "firebase/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const ForgotPassword = () => {
@@ -16,7 +15,8 @@ const ForgotPassword = () => {
     
     setBusy(true);
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+      if (error) throw error;
       setSent(true);
       toast.success("Reset link sent to your email");
     } catch (error: any) {
