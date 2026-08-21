@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthProvider";
-import { collection, query, where, orderBy, limit as firestoreLimit, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 export type LedgerRow = {
   id: string;
@@ -23,18 +22,18 @@ export function useWalletLedger(limit = 40) {
     setLoading(true);
     const uid = user.id;
 
-    const fetchCol = async (col: string, userIdKey = "user_id") => {
+    const fetchCol = async (table: string, userIdKey = "user_id") => {
       try {
-        const q = query(
-          collection(db, col),
-          where(userIdKey, "==", uid),
-          orderBy("created_at", "desc"),
-          firestoreLimit(limit)
-        );
-        const snap = await getDocs(q);
-        return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const { data, error } = await supabase
+          .from(table as any)
+          .select('*')
+          .eq(userIdKey, uid)
+          .order('created_at', { ascending: false })
+          .limit(limit);
+        if (error) throw error;
+        return (data || []) as any[];
       } catch (e) {
-        console.warn(`Failed to fetch ${col} from Firestore`, e);
+        console.warn(`Failed to fetch ${table} from Supabase`, e);
         return [];
       }
     };

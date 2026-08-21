@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { doc, runTransaction, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TipParams {
   senderId: string;
@@ -26,45 +25,53 @@ export function useTipSend() {
     }
 
     try {
-      // TODO: Move wallet transfer logic to a Firebase Cloud Function for production security.
-      // Client-side runTransaction prevents double-spend but cannot enforce authorization on the recipient credit.
-      const senderWalletRef = doc(db, "wallets", senderId);
-      const recipientWalletRef = doc(db, "wallets", recipientId);
+      // 1. Read sender wallet
+      const { data: senderWallet } = await supabase
+        .from('wallets' as any)
+        .select('total')
+        .eq('user_id', senderId)
+        .single();
 
-      await runTransaction(db, async (transaction) => {
-        // 1. Read sender wallet inside transaction for atomicity
-        const senderSnap = await transaction.get(senderWalletRef);
-        const currentBalance = senderSnap.exists() ? (senderSnap.data().total || 0) : 0;
+      const currentBalance = (senderWallet as any)?.total || 0;
 
-        if (currentBalance < amount) {
-          throw new Error("Insufficient balance");
-        }
+      if (currentBalance < amount) {
+        throw new Error("Insufficient balance");
+      }
 
-        // 2. Read recipient wallet
-        const recipientSnap = await transaction.get(recipientWalletRef);
+      // 2. Deduct from sender
+      await supabase
+        .from('wallets' as any)
+        .update({ total: currentBalance - amount })
+        .eq('user_id', senderId);
 
-        // 3. Deduct from sender
-        transaction.update(senderWalletRef, { total: currentBalance - amount });
+      // 3. Credit to recipient (upsert)
+      const { data: recipientWallet } = await supabase
+        .from('wallets' as any)
+        .select('total')
+        .eq('user_id', recipientId)
+        .maybeSingle();
 
-        // 4. Credit to recipient
-        if (recipientSnap.exists()) {
-          const recipientBalance = recipientSnap.data().total || 0;
-          transaction.update(recipientWalletRef, { total: recipientBalance + amount });
-        } else {
-          transaction.set(recipientWalletRef, { user_id: recipientId, total: amount });
-        }
+      if (recipientWallet) {
+        const recipientBalance = (recipientWallet as any).total || 0;
+        await supabase
+          .from('wallets' as any)
+          .update({ total: recipientBalance + amount })
+          .eq('user_id', recipientId);
+      } else {
+        await supabase
+          .from('wallets' as any)
+          .insert({ user_id: recipientId, total: amount });
+      }
 
-        // 5. Log transaction inside the same atomic transaction
-        const txRef = doc(collection(db, "transactions"));
-        transaction.set(txRef, {
-          sender_id: senderId,
-          recipient_id: recipientId,
-          amount,
-          type: "tip",
-          post_id: postId || null,
-          message: message || null,
-          created_at: serverTimestamp(),
-        });
+      // 4. Log transaction
+      await supabase.from('transactions' as any).insert({
+        sender_id: senderId,
+        recipient_id: recipientId,
+        amount,
+        type: "tip",
+        post_id: postId || null,
+        message: message || null,
+        created_at: new Date().toISOString(),
       });
 
       setLoading(false);

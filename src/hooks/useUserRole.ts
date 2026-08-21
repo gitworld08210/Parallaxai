@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthProvider";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 export const useUserRole = () => {
   const { user, loading: authLoading } = useAuth();
@@ -21,14 +20,17 @@ export const useUserRole = () => {
     let cancelled = false;
     (async () => {
       try {
-        const snap = await getDoc(doc(db, "profiles", user.id));
-        if (snap.exists() && !cancelled) {
-          const data = snap.data();
-          setIsAdmin(!!data.is_admin);
-          setIsModerator(!!data.is_moderator || !!data.is_admin);
+        const { data } = await supabase
+          .from('profiles' as any)
+          .select('is_admin, is_moderator')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (data && !cancelled) {
+          setIsAdmin(!!(data as any).is_admin);
+          setIsModerator(!!(data as any).is_moderator || !!(data as any).is_admin);
         }
       } catch (e) {
-        console.warn("Failed to fetch user roles from Firestore", e);
+        console.warn("Failed to fetch user roles from Supabase", e);
       } finally {
         if (!cancelled) setLoading(false);
       }

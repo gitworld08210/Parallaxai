@@ -4,8 +4,7 @@ import { SideMenu } from "@/components/layout/SideMenu";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { useAuth } from "@/contexts/AuthProvider";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 export const AppShell = () => {
@@ -16,35 +15,55 @@ export const AppShell = () => {
   const [unreadDm, setUnreadDm] = useState(0);
 
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.id) return;
 
-    const notifQuery = query(
-      collection(db, "notifications"),
-      where("user_id", "==", user.uid),
-      where("read", "==", false)
-    );
+    // Initial fetch of notification count
+    const fetchCounts = async () => {
+      const { count } = await supabase
+        .from('notifications' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+      setUnreadNotif(count || 0);
 
-    const unsubNotif = onSnapshot(notifQuery, (snap) => {
-      setUnreadNotif(snap.size);
-    });
+      const { count: dmCount } = await supabase
+        .from('unread_counts' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gt('count', 0);
+      setUnreadDm(dmCount || 0);
+    };
+    fetchCounts();
 
-    // Use a dedicated unread_counts collection keyed by user uid
-    // Each document: { user_id, conversation_id, unread_count }
-    const unreadQuery = query(
-      collection(db, "unread_counts"),
-      where("user_id", "==", user.uid),
-      where("count", ">", 0)
-    );
+    // Real-time subscriptions
+    const notifChannel = supabase
+      .channel('notifications-' + user.id)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + user.id },
+        () => {
+          // Refetch count on any change
+          fetchCounts();
+        }
+      )
+      .subscribe();
 
-    const unsubDm = onSnapshot(unreadQuery, (snap) => {
-      setUnreadDm(snap.size);
-    });
+    const dmChannel = supabase
+      .channel('unread_counts-' + user.id)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'unread_counts', filter: 'user_id=eq.' + user.id },
+        () => {
+          fetchCounts();
+        }
+      )
+      .subscribe();
 
     return () => {
-      unsubNotif();
-      unsubDm();
+      supabase.removeChannel(notifChannel);
+      supabase.removeChannel(dmChannel);
     };
-  }, [user?.uid]);
+  }, [user?.id]);
 
   const hideNav = ["/auth", "/onboarding", "/profile-creation"].some((p) => loc.pathname.startsWith(p));
   if (hideNav) return <Outlet />;

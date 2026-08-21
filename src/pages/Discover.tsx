@@ -5,9 +5,8 @@ import { Search, TrendingUp, Sparkles, Crown, BadgeCheck, Flame, PenSquare } fro
 import { AuraAvatar } from "@/components/vibe/AuraAvatar";
 import { VerificationBadge } from "@/components/vibe/VerificationBadge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { collection, query, where, orderBy, limit, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { useInfiniteFirestore } from "@/hooks/useInfiniteFirestore";
+import { supabase } from "@/integrations/supabase/client";
+import { useInfiniteSupabase } from "@/hooks/useInfiniteSupabase";
 
 import { useAuth } from "@/contexts/AuthProvider";
 import { fmt, gradientFor, initialsOf } from "@/lib/format";
@@ -15,7 +14,6 @@ import { toast } from "sonner";
 import { checkRateLimit, followLimiter } from "@/lib/rateLimit";
 import { cn } from "@/lib/utils";
 import { getProfileAvatarUrl } from "@/lib/cloudinary";
-import { setDoc, doc, deleteDoc, serverTimestamp } from "firebase/firestore";
 
 type Profile = {
   user_id: string;
@@ -44,17 +42,18 @@ const Discover = () => {
   const [following, setFollowing] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
-  // Cursor-based pagination for profiles
-  const profilesQuery = useMemo(
-    () => query(collection(db, "profiles"), orderBy("followers_count", "desc")),
-    []
-  );
+  // Cursor-based pagination for profiles using Supabase
   const {
     data: paginatedProfiles,
     loading: profilesLoading,
     hasMore: profilesHasMore,
     loadMore: loadMoreProfiles,
-  } = useInfiniteFirestore<Profile>(profilesQuery, { pageSize: 20 });
+  } = useInfiniteSupabase<Profile>({
+    table: "profiles",
+    select: "*",
+    orderBy: { column: "followers_count", ascending: false },
+    pageSize: 20,
+  });
 
   const allProfiles = useMemo(
     () => paginatedProfiles.filter((p) => p.user_id !== user?.id),
@@ -69,17 +68,17 @@ const Discover = () => {
     setLoading(true);
     Promise.all([
       loadMoreProfiles(),
-      getDocs(query(
-        collection(db, "posts"),
-        where("is_reel", "==", false),
-        orderBy("like_count", "desc"),
-        limit(6)
-      )),
+      supabase
+        .from('posts' as any)
+        .select('*')
+        .eq('is_reel', false)
+        .order('like_count', { ascending: false })
+        .limit(6),
       Promise.resolve({ data: [] }),
     ]).then(([_, tRes, fRes]) => {
       if (cancelled) return;
       initialLoadDoneRef.current = true;
-      setTrending((tRes.docs.map(doc => ({ id: doc.id, ...doc.data() })) as TrendingPost[]));
+      setTrending(((tRes.data || []) as unknown as TrendingPost[]));
       setFollowing(new Set(((fRes.data ?? []) as any[]).map((f) => f.following_id)));
       setLoading(false);
     });
@@ -110,15 +109,21 @@ const Discover = () => {
     const next = new Set(following);
     if (isF) {
       next.delete(target); setFollowing(next);
-      await deleteDoc(doc(db, "follows", `${user.id}_${target}`));
+      await supabase
+        .from('follows' as any)
+        .delete()
+        .eq('follower_id', user.id)
+        .eq('following_id', target);
     } else {
       next.add(target); setFollowing(next);
       try {
-        await setDoc(doc(db, "follows", `${user.id}_${target}`), {
+        const { error } = await supabase.from('follows' as any).insert({
+          id: `${user.id}_${target}`,
           follower_id: user.id,
           following_id: target,
-          created_at: serverTimestamp()
+          created_at: new Date().toISOString(),
         });
+        if (error) throw error;
       } catch (e) {
         next.delete(target); setFollowing(new Set(next)); toast.error("Follow failed");
       }
@@ -166,7 +171,7 @@ const Discover = () => {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search creators, posts, topics…"
+            placeholder="Search creators, posts, topics..."
             className="bg-transparent outline-none flex-1 text-sm placeholder:text-muted-foreground"
           />
         </div>
@@ -212,7 +217,7 @@ const Discover = () => {
       {/* Search results take over when typing */}
       {term ? (
         <div className="px-4 mt-5">
-          <SectionHeader icon={Search} label={`Results · ${searchResults.length}`} />
+          <SectionHeader icon={Search} label={`Results - ${searchResults.length}`} />
           <div className="mt-3 divide-y divide-border">
             {searchResults.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-10">No creators found.</p>
@@ -382,7 +387,7 @@ const CreatorRow = ({
         <p className="text-sm font-semibold truncate">{p.display_name || p.username}</p>
         {p.verification_kind ? <VerificationBadge kind={p.verification_kind as any} /> : p.verified && <VerificationBadge kind="verified" />}
       </Link>
-      <p className="text-xs text-muted-foreground truncate">@{p.username} · {fmt(p.followers_count)} followers</p>
+      <p className="text-xs text-muted-foreground truncate">@{p.username} - {fmt(p.followers_count)} followers</p>
     </div>
     <button
       onClick={onToggle}

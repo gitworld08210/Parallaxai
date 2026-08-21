@@ -5,8 +5,7 @@ import { AuraAvatar } from "@/components/vibe/AuraAvatar";
 import { gradientFor, initialsOf, timeAgo } from "@/lib/format";
 import { Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { collection, query, where, orderBy, limit, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, increment } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 type Comment = {
   id: string;
@@ -24,18 +23,38 @@ export const CommentSheet = ({ postId, open, onOpenChange }: { postId: string | 
 
   useEffect(() => {
     if (!postId || !open) return;
-    const q = query(
-      collection(db, "comments"),
-      where("post_id", "==", postId),
-      orderBy("created_at", "asc"),
-      limit(100)
-    );
 
-    const unsubscribe = onSnapshot(q, (snap) => {
-      setItems(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Comment[]);
-    });
+    // Initial fetch
+    const fetchComments = async () => {
+      const { data } = await supabase
+        .from('comments' as any)
+        .select('*')
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true })
+        .limit(100);
+      if (data) setItems(data as unknown as Comment[]);
+    };
+    fetchComments();
 
-    return () => unsubscribe();
+    // Real-time subscription
+    const channel = supabase
+      .channel('comments-' + postId)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'comments', filter: 'post_id=eq.' + postId },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setItems((prev) => [...prev, payload.new as unknown as Comment]);
+          } else if (payload.eventType === 'DELETE') {
+            setItems((prev) => prev.filter((c) => c.id !== (payload.old as any).id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [postId, open]);
 
   const submit = async (e: React.FormEvent) => {
@@ -43,18 +62,25 @@ export const CommentSheet = ({ postId, open, onOpenChange }: { postId: string | 
     if (!user || !postId || !text.trim()) return;
     setLoading(true);
     try {
-      await addDoc(collection(db, "comments"), {
+      await supabase.from('comments' as any).insert({
         post_id: postId,
         user_id: user.id,
         content: text.trim(),
-        created_at: serverTimestamp(),
+        created_at: new Date().toISOString(),
         profile: {
           username: user.user_metadata?.username || user.email?.split('@')[0] || "user",
           display_name: user.user_metadata?.display_name || "User",
           avatar_url: user.user_metadata?.avatar_url || null
         }
       });
-      await updateDoc(doc(db, "posts", postId), { comment_count: increment(1) });
+      // Update post comment count
+      const { data: postData } = await supabase
+        .from('posts' as any)
+        .select('comment_count')
+        .eq('id', postId)
+        .single();
+      const currentCount = (postData as any)?.comment_count || 0;
+      await supabase.from('posts' as any).update({ comment_count: currentCount + 1 }).eq('id', postId);
       setText("");
     } catch (e: any) {
       toast.error(e.message || "Action failed");
@@ -92,7 +118,7 @@ export const CommentSheet = ({ postId, open, onOpenChange }: { postId: string | 
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Add a comment…"
+              placeholder="Add a comment..."
               maxLength={500}
               className="flex-1 glass rounded-full px-4 py-2.5 text-sm outline-none"
             />

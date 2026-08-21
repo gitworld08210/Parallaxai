@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthProvider";
-import { doc, updateDoc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, ShieldCheck, Zap, Sparkles } from "lucide-react";
 
@@ -21,9 +20,13 @@ export function BecomeCreatorSheet({ open, onOpenChange }: BecomeCreatorSheetPro
     (async () => {
       if (!open) return;
       try {
-        const configDoc = await getDoc(doc(db, "config", "creator_terms"));
-        if (configDoc.exists()) {
-          setVersion(configDoc.data().version || "1.0.0");
+        const { data } = await supabase
+          .from('config' as any)
+          .select('data')
+          .eq('id', 'creator_terms')
+          .maybeSingle();
+        if (data) {
+          setVersion((data as any).data?.version || (data as any).version || "1.0.0");
         }
       } catch (err) {
         console.error("Error fetching creator config:", err);
@@ -35,12 +38,15 @@ export function BecomeCreatorSheet({ open, onOpenChange }: BecomeCreatorSheetPro
     if (!user) return;
     setSubmitting(true);
     try {
-      const profileRef = doc(db, "profiles", user.uid);
-      await updateDoc(profileRef, {
-        is_creator: true,
-        creator_terms_version: version,
-        creator_activated_at: new Date().toISOString()
-      });
+      const { error } = await supabase
+        .from('profiles' as any)
+        .update({
+          is_creator: true,
+          creator_terms_version: version,
+          creator_activated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+      if (error) throw error;
       toast.success("Welcome, Creator ✦");
       if (refreshProfile) await refreshProfile();
       onOpenChange(false);

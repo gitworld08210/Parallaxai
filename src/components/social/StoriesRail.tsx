@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 
 import { useAuth } from "@/contexts/AuthProvider";
 import { initialsOf } from "@/lib/format";
@@ -35,17 +34,16 @@ export const StoriesRail = () => {
     if (!user?.id) { setGroups([]); return; }
     
     try {
-      // Fetch stories from Firestore
-      // For now, since social graph is not fully in Firestore, we show all active stories
-      const q = query(
-        collection(db, "stories"),
-        where("expires_at", ">", new Date().toISOString()),
-        orderBy("created_at", "asc")
-      );
-      const snap = await getDocs(q);
-      const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const { data, error } = await supabase
+        .from('stories' as any)
+        .select('*')
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
       const map = new Map<string, Group>();
-      (data ?? []).forEach((s: any) => {
+      ((data ?? []) as any[]).forEach((s: any) => {
         const g = map.get(s.user_id) ?? { user_id: s.user_id, profile: s.profile, stories: [] };
         g.stories.push(s);
         map.set(s.user_id, g);

@@ -6,8 +6,7 @@ import {
 } from "lucide-react";
 import { TipSheet } from "@/components/social/TipSheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { doc, getDoc, setDoc, deleteDoc, updateDoc, increment, arrayUnion, arrayRemove, collection, addDoc, query, where, getDocs, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthProvider";
 import { AuraAvatar } from "@/components/vibe/AuraAvatar";
 import { VerificationBadge } from "@/components/vibe/VerificationBadge";
@@ -85,9 +84,13 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
     if (!user) return;
     (async () => {
       try {
-        const saveRef = doc(db, "saves", `${user.id}_${post.id}`);
-        const snap = await getDoc(saveRef);
-        setSaved(snap.exists());
+        const saveId = `${user.id}_${post.id}`;
+        const { data } = await supabase
+          .from('saves' as any)
+          .select('id')
+          .eq('id', saveId)
+          .maybeSingle();
+        setSaved(!!data);
       } catch (err) {
         console.error("Error checking save:", err);
       }
@@ -106,8 +109,14 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
       for (const e of entries) {
         if (e.isIntersecting && e.intersectionRatio >= 0.6 && !viewedThisSession.has(post.id)) {
           viewedThisSession.add(post.id);
-          // Increment views in Firestore
-          try { updateDoc(doc(db, "posts", post.id), { view_count: increment(1) }); } catch(e) {}
+          // Increment views in Supabase
+          try {
+            supabase
+              .from('posts' as any)
+              .update({ view_count: (post as any).view_count ? (post as any).view_count + 1 : 1 })
+              .eq('id', post.id)
+              .then(() => {});
+          } catch(e) {}
           obs.disconnect();
         }
       }
@@ -123,19 +132,18 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
     setLiked(next); setLikes((c) => c + (next ? 1 : -1));
     try {
       const likeId = `${user.id}_${post.id}`;
-      const likeRef = doc(db, "likes", likeId);
-      const postRef = doc(db, "posts", post.id);
 
       if (next) {
-        await setDoc(likeRef, {
+        await supabase.from('likes' as any).insert({
+          id: likeId,
           user_id: user.id,
           post_id: post.id,
-          created_at: serverTimestamp()
+          created_at: new Date().toISOString(),
         });
-        await updateDoc(postRef, { like_count: increment(1) });
+        await supabase.from('posts' as any).update({ like_count: likes + 1 }).eq('id', post.id);
       } else {
-        await deleteDoc(likeRef);
-        await updateDoc(postRef, { like_count: increment(-1) });
+        await supabase.from('likes' as any).delete().eq('id', likeId);
+        await supabase.from('posts' as any).update({ like_count: likes - 1 }).eq('id', post.id);
       }
     } catch (error: any) {
       console.error("Error toggling like:", error);
@@ -150,11 +158,16 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
     setSaved(next);
     try {
       const saveId = `${user.id}_${post.id}`;
-      const saveRef = doc(db, "saves", saveId);
       if (next) {
+        await supabase.from('saves' as any).insert({
+          id: saveId,
+          user_id: user.id,
+          post_id: post.id,
+          created_at: new Date().toISOString(),
+        });
         toast.success("Saved");
       } else {
-        await deleteDoc(saveRef);
+        await supabase.from('saves' as any).delete().eq('id', saveId);
       }
     } catch (error: any) {
       console.error("Error toggling save:", error);
@@ -175,7 +188,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
   const remove = async () => {
     if (!confirm("Delete this post?")) return;
     try {
-      await deleteDoc(doc(db, "posts", post.id));
+      await supabase.from('posts' as any).delete().eq('id', post.id);
       toast.success("Deleted");
     } catch (error: any) {
       toast.error(error.message);
@@ -247,10 +260,8 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
                 )}
                 {isOwner && !post.has_certificate && post.media_url && (
                   <DropdownMenuItem onSelect={async () => {
-                    toast.loading("Generating certificate…", { id: "cert" });
-                    // Certificate generation will be moved to a Firebase Cloud Function.
-                    // For now, we simulate success or show coming soon.
-                    toast.error("Certificate generation coming soon to Firebase");
+                    toast.loading("Generating certificate...", { id: "cert" });
+                    toast.error("Certificate generation coming soon");
                   }}>
                     <ShieldCheck className="h-4 w-4 mr-2" /> Generate certificate
                   </DropdownMenuItem>
@@ -294,7 +305,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
               {linkify(shortCaption)}
               {longCaption && !expanded && (
                 <>
-                  <span className="text-muted-foreground">… </span>
+                  <span className="text-muted-foreground">... </span>
                   <button onClick={() => setExpanded(true)} className="text-primary font-medium hover:underline">
                     Show more
                   </button>
@@ -318,7 +329,7 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
             </div>
           )}
 
-          {/* X-style action row: reply · repost · like · tip · save */}
+          {/* X-style action row: reply, repost, like, tip, save */}
           <div className="mt-2 -ml-2 flex items-center justify-between max-w-md pr-2 text-muted-foreground">
             <ActionBtn
               label="Reply"
