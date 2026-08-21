@@ -2,7 +2,7 @@
   "task_id": "task-migrate-firebase-to-supabase",
   "task_description": "Complete migration from Firebase (Auth, Firestore, Storage) to Supabase (Auth, Database) and Cloudinary (media storage). Replace all Firebase Auth with Supabase Auth, all Firestore reads/writes with Supabase table queries, and Firebase Storage with Cloudinary uploads. Remove all Firebase dependencies.",
   "status": "in_progress",
-  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004", "FEAT-005"],
   "blocked_reason": null,
   "verification": {
     "build": "pass",
