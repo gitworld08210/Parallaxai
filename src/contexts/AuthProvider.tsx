@@ -66,6 +66,27 @@ const AuthCtx = createContext<Ctx | undefined>(undefined);
 // Token refresh interval (50 minutes — Firebase tokens expire at 60 min)
 const TOKEN_REFRESH_INTERVAL = 50 * 60 * 1000;
 
+const buildFallbackProfile = (fbUser: {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}): Profile => ({
+  id: fbUser.uid,
+  user_id: fbUser.uid,
+  username: fbUser.email?.split("@")[0] || fbUser.uid.slice(0, 8),
+  display_name: fbUser.displayName || fbUser.email?.split("@")[0] || "User",
+  avatar_url: fbUser.photoURL,
+  cover_url: null,
+  bio: null,
+  onboarded_at: new Date().toISOString(),
+  verified: false,
+  verification_kind: null,
+  followers_count: 0,
+  following_count: 0,
+  posts_count: 0,
+});
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -219,19 +240,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    const authUnsub = onAuthStateChanged(auth, async (fbUser) => {
-      if (fbUser) {
-        const token = await fbUser.getIdToken();
+    const authUnsub = onAuthStateChanged(
+      auth,
+      async (fbUser) => {
+        if (!fbUser) {
+          setUser(null);
+          setProfile(null);
+          setSession(null);
+          stopTokenRefresh();
+          setLoading(false);
+          return;
+        }
 
-        // Create profile in Supabase if it doesn't exist
-        await createProfileInSupabase(
-          fbUser.uid,
-          fbUser.email || "",
-          fbUser.displayName,
-          fbUser.photoURL
-        );
-
-        setUser({
+        const appUser: User = {
           id: fbUser.uid,
           uid: fbUser.uid,
           email: fbUser.email || undefined,
@@ -244,44 +265,47 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           aud: "authenticated",
           created_at: fbUser.metadata.creationTime || new Date().toISOString(),
           last_sign_in_at: fbUser.metadata.lastSignInTime || new Date().toISOString(),
-        });
+        };
 
-        setSession({
-          access_token: token,
-          refresh_token: "firebase-managed",
-          user: fbUser,
-        });
+        // Firebase identity is enough to render the app. Supabase profile hydration
+        // runs separately so a slow or unavailable network can never hold startup.
+        setUser(appUser);
+        setProfile(buildFallbackProfile(fbUser));
 
-        // Start token refresh timer
-        startTokenRefresh();
-
-        // ─── FIX: Previously assigned a Promise to a variable typed as (() => void).
-        //     Now properly awaiting the query and handling the result inline.
         try {
-          const { data, error } = await supabase
-            .from("profiles")
-            .select("*")
-            .eq("user_id", fbUser.uid)
-            .maybeSingle();
+          const token = await fbUser.getIdToken();
+          if (auth.currentUser?.uid !== fbUser.uid) return;
+          setSession({
+            access_token: token,
+            refresh_token: "firebase-managed",
+            user: fbUser,
+          });
+          startTokenRefresh();
+        } catch (tokenError) {
+          console.error("Firebase token initialization failed:", tokenError);
+          setSession(null);
+        } finally {
+          setLoading(false);
+        }
 
-          if (error) {
-            console.error("Profile fetch error:", error);
-            setProfile({
-              id: fbUser.uid,
-              user_id: fbUser.uid,
-              username: fbUser.email?.split('@')[0] || fbUser.uid.slice(0, 8),
-              display_name: fbUser.displayName || fbUser.email?.split('@')[0] || "User",
-              avatar_url: fbUser.photoURL,
-              cover_url: null,
-              bio: null,
-              onboarded_at: new Date().toISOString(),
-              verified: false,
-              verification_kind: null,
-              followers_count: 0,
-              following_count: 0,
-              posts_count: 0,
-            });
-          } else if (data) {
+        void (async () => {
+          await createProfileInSupabase(
+            fbUser.uid,
+            fbUser.email || "",
+            fbUser.displayName,
+            fbUser.photoURL
+          );
+
+          try {
+            const { data, error } = await supabase
+              .from("profiles")
+              .select("*")
+              .eq("user_id", fbUser.uid)
+              .maybeSingle();
+
+            if (error) throw error;
+            if (!data || auth.currentUser?.uid !== fbUser.uid) return;
+
             setProfile({
               id: data.id,
               user_id: data.user_id,
@@ -305,52 +329,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               role: data.role,
               department: data.department,
             });
-          } else {
-            // Fallback profile if none exists
-            setProfile({
-              id: fbUser.uid,
-              user_id: fbUser.uid,
-              username: fbUser.email?.split('@')[0] || fbUser.uid.slice(0, 8),
-              display_name: fbUser.displayName || fbUser.email?.split('@')[0] || "User",
-              avatar_url: fbUser.photoURL,
-              cover_url: null,
-              bio: null,
-              onboarded_at: new Date().toISOString(),
-              verified: false,
-              verification_kind: null,
-              followers_count: 0,
-              following_count: 0,
-              posts_count: 0,
-            });
+          } catch (profileError) {
+            console.error("Supabase profile hydration failed:", profileError);
           }
-        } catch (profileErr) {
-          console.error("Profile fetch exception:", profileErr);
-          setProfile({
-            id: fbUser.uid,
-            user_id: fbUser.uid,
-            username: fbUser.email?.split('@')[0] || fbUser.uid.slice(0, 8),
-            display_name: fbUser.displayName || fbUser.email?.split('@')[0] || "User",
-            avatar_url: fbUser.photoURL,
-            cover_url: null,
-            bio: null,
-            onboarded_at: new Date().toISOString(),
-            verified: false,
-            verification_kind: null,
-            followers_count: 0,
-            following_count: 0,
-            posts_count: 0,
-          });
-        }
-
-        setLoading(false);
-      } else {
+        })();
+      },
+      (authError) => {
+        console.error("Firebase auth observer failed:", authError);
         setUser(null);
         setProfile(null);
         setSession(null);
         stopTokenRefresh();
         setLoading(false);
       }
-    });
+    );
 
     return () => {
       authUnsub();
