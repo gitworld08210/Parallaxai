@@ -1,26 +1,37 @@
-import i18n from 'i18next';
-import { initReactI18next } from 'react-i18next';
-import en from './locales/en.json';
-import hi from './locales/hi.json';
+import i18n from "i18next";
+import { initReactI18next } from "react-i18next";
+import en from "./locales/en.json";
+import hi from "./locales/hi.json";
 
-const LANGUAGE_KEY = 'parallax-lang';
+const LANGUAGE_KEY = "parallax-lang";
 
-const savedLanguage = localStorage.getItem(LANGUAGE_KEY) || 'en';
+const getSavedLanguage = () => {
+  try {
+    return localStorage.getItem(LANGUAGE_KEY) || "en";
+  } catch {
+    return "en";
+  }
+};
 
-i18n.use(initReactI18next).init({
+void i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
     hi: { translation: hi },
   },
-  lng: savedLanguage,
-  fallbackLng: 'en',
+  lng: getSavedLanguage(),
+  fallbackLng: "en",
   interpolation: {
     escapeValue: false,
   },
 });
 
-i18n.on('languageChanged', (lng) => {
-  localStorage.setItem(LANGUAGE_KEY, lng);
+i18n.on("languageChanged", (language) => {
+  try {
+    localStorage.setItem(LANGUAGE_KEY, language);
+  } catch {
+    // Storage can be unavailable in restricted WebViews; language still works
+    // for the current process.
+  }
 });
 
 export default i18n;

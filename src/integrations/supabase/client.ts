@@ -1,27 +1,28 @@
-import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/types/supabase';
+import { createClient } from "@supabase/supabase-js";
+import { Database } from "@/types/supabase";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Supabase project URL and publishable key are public client configuration, not
+// privileged secrets. Environment values take precedence; committed fallbacks
+// keep Android and preview builds operational when local .env files are absent.
+const DEFAULT_SUPABASE_URL = "https://ijkxadnmeqfflfuwvmfz.supabase.co";
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable_INrZGWBakhnn6gNfN0PgGg_KTGi5lW_";
 
-// ─── Supabase client initialization ──────────────────────────────────────────
-// If credentials are missing, create a client that will throw descriptive errors
-// when queries are attempted rather than failing silently with placeholder URLs.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const supabaseKey =
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Supabase credentials missing! Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env");
-  console.error("Supabase is REQUIRED for this app. Create a free project at https://supabase.com and update .env");
-}
-
-// Create a custom client wrapper that provides better error messages
-const createSupabaseClient = () => {
-  if (!supabaseUrl) {
-    throw new Error("VITE_SUPABASE_URL is not set in environment variables");
-  }
-  if (!supabaseAnonKey) {
-    throw new Error("VITE_SUPABASE_ANON_KEY (or VITE_SUPABASE_PUBLISHABLE_KEY) is not set in environment variables");
-  }
-  return createClient<Database>(supabaseUrl, supabaseAnonKey);
-};
-
-export const supabase = createSupabaseClient();
+export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+  },
+  global: {
+    headers: {
+      "X-Client-Info": "aurelix-web",
+    },
+  },
+});

@@ -428,8 +428,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <NativeInit />
         <AuthProvider>
+          <NativeInit />
           <CallProvider>
           <Suspense fallback={<RouteFallback />}>
             <Routes>
