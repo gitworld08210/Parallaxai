@@ -1,0 +1,26 @@
+{
+  "id": "FEAT-001",
+  "type": "chore",
+  "description": "Create feature branch and verify baseline builds cleanly (TypeScript, Vite, tests all pass).",
+  "status": "completed",
+  "steps": [
+    "Create and checkout branch feat/android-native-ui from main",
+    "Run bunx tsc --noEmit and confirm 0 errors",
+    "Run bun run build and confirm success",
+    "Run bun run test -- --run and note baseline results (30 pass, 3 pre-existing failures is acceptable)"
+  ],
+  "acceptance_criteria": [
+    "Branch feat/android-native-ui exists and is checked out",
+    "TypeScript compiles with 0 errors",
+    "Vite build succeeds",
+    "Tests run without new failures"
+  ],
+  "verification": [
+    "git branch --show-current shows feat/android-native-ui",
+    "bunx tsc --noEmit exits 0",
+    "bun run build exits 0",
+    "bun run test -- --run shows no regressions"
+  ],
+  "blocked_reason": null,
+  "findings": "Baseline verified: TypeScript 0 errors, Vite build succeeds (8.69s), Tests 30 pass / 3 pre-existing failures. Pre-existing test failures: (1) BuyCoinsSheet.test.tsx - 2 failures due to price format mismatch (tests expect currency symbol prefix like '₹49' but component renders plain numbers like '49'), (2) TipSheet.test.tsx - 1 failure for same currency formatting issue. These are not regressions. Also note: vitest teardown emits a harmless ReferenceError about 'listeners' - this is a bun/vitest compatibility quirk and does not affect test correctness."
+}
