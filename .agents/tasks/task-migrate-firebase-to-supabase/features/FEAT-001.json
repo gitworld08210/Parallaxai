@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "chore",
   "description": "Set up migration branch and update Supabase client configuration. Enable session persistence and auto-refresh tokens in the Supabase client, which is required before migrating auth. Also update the Database types to include the tables currently only in Firestore (push_tokens, admin_audit_logs, wallets, transactions, posts, likes, comments, stories, follows, notifications, unread_counts, saves, coin_purchases, payment_settings, verification_requests, coin_topups, virtual_world_applications, onboarding_sessions, error_logs, conversations, usernames, email_accounts, config).",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Create and switch to branch feat/migrate-firebase-to-supabase from the current branch",
     "Update src/integrations/supabase/client.ts: set persistSession: true, autoRefreshToken: true, detectSessionInUrl: true",
@@ -20,5 +20,5 @@
     "Run 'bun run build' and confirm build succeeds"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "TypeScript check passes cleanly (no errors). Build succeeds. All 33 tests pass. The test runner exits with code 1 due to a pre-existing tinypool cleanup issue (ReferenceError: Cannot access listeners before initialization) but all tests themselves pass. The supabase.ts file was rewritten to replace old placeholder table defs with Firestore-aligned schemas per the migration spec. Field names updated to match Firestore usage (e.g. like_count not likes_count, total not balance for wallets, read not is_read for notifications, member_ids array for conversations)."
 }
