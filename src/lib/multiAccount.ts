@@ -1,6 +1,3 @@
-import { auth } from "@/lib/firebase";
-import { signInWithCustomToken } from "firebase/auth";
-
 const KEY = "aurelix.savedAccounts.v2";
 export const MAX_ACCOUNTS = 5;
 
@@ -48,9 +45,8 @@ export const removeSavedAccount = (userId: string) => {
 };
 
 export const switchToAccount = async (acc: SavedAccount) => {
-  // Since we're using Firebase Auth now, switching accounts requires a re-login
-  // or using Firebase's multi-auth if supported. 
-  // For now, we'll suggest using the Email/PW login in the switcher.
+  // Supabase does not support multi-account session switching natively.
+  // Users must re-enter credentials to switch accounts.
   throw new Error("Please re-enter credentials to switch accounts.");
 };
 
