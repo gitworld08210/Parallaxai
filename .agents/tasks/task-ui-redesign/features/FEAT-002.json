@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-002",
+  "type": "feat",
+  "description": "Redesign the navigation, feed page, post cards, stories rail, and feed skeleton to achieve premium visual quality. Make MobileNav distinctive with active indicators and micro-animations. Make PostCard feel like premium content cards. Improve StoriesRail spacing and ring styling. Create beautiful skeleton loading states.",
+  "status": "completed",
+  "steps": [
+    "In src/components/layout/MobileNav.tsx, redesign the bottom navigation: (1) Replace bg-black/90 with a glassmorphism-style bg-background/80 backdrop-blur-2xl with a subtle top border gradient. (2) Add an animated active indicator - a small pill/dot below the active icon using framer-motion layoutId for smooth transitions between tabs. (3) Make active icons use the primary color fill. (4) Increase vertical padding to py-3 for larger touch targets. (5) Make the Create button stand out with a gradient background (bg-gradient-primary) and slightly larger icon.",
+    "In src/pages/Feed.tsx, improve the feed header: (1) Replace bg-black/80 with bg-background/85 backdrop-blur-xl for glassmorphism. (2) Make the brand text 'Parallax' use font-serif italic with slightly larger size (text-3xl). (3) Add a subtle gradient radial glow behind the header. (4) Improve tab styling - make the active tab underline thicker (h-1.5) and use a gradient instead of solid color. (5) Add more spacing between StoriesRail and posts section (py-4 gap).",
+    "In src/components/social/PostCard.tsx, elevate the post card design: (1) Replace bg-black with bg-card for proper token usage. (2) Add rounded-2xl overflow-hidden to media containers with a subtle inner shadow overlay at bottom for depth. (3) Make the avatar ring more visible with ring-2 ring-primary/20 on hover. (4) Add a subtle hover state to the entire article (hover:bg-card/80 transition-colors). (5) Improve the action buttons row with slightly larger hit areas and smoother hover transitions. (6) Replace border-b border-white/[0.05] with border-b border-border for proper token usage.",
+    "In src/components/social/StoriesRail.tsx, improve the stories: (1) Increase avatar size from h-16 w-16 to h-[68px] w-[68px]. (2) Add gradient ring around unseen stories (using the aura gradient). (3) Make the 'Your story' plus button use bg-primary with a subtle glow shadow. (4) Add more horizontal padding between story items (gap-3 to gap-4). (5) Make the container border-b use border-border token.",
+    "In src/components/social/FeedSkeleton.tsx, create premium skeleton loading: (1) Replace flat bg-muted divs with the shimmer animation class. (2) Add rounded-2xl to the image placeholder. (3) Use slightly varying widths for text lines to look more natural. (4) Add subtle opacity variation between skeleton elements. (5) Remove the unused supabase import.",
+    "In src/components/layout/AppLoadingScreen.tsx, make the loading screen more premium: (1) Replace bg-[#050505] with bg-background. (2) Add animated gradient orbs in the background (2-3 large blurred circles that slowly move). (3) Make the brand text larger (text-6xl). (4) Replace the simple dot indicator with a sleek progress bar or animated gradient line. (5) Add a subtle fade-in animation to the entire screen."
+  ],
+  "acceptance_criteria": [
+    "MobileNav has visible active indicator animation and glassmorphism background",
+    "Feed header uses glassmorphism backdrop blur and gradient tab underline",
+    "PostCard uses proper design tokens (bg-card, border-border) not raw black",
+    "Stories have gradient rings for unseen content and larger touch targets",
+    "Skeleton loading uses shimmer animation instead of flat gray",
+    "Loading screen has animated background elements and larger brand text",
+    "bunx tsc --noEmit passes with 0 errors",
+    "bun run build succeeds"
+  ],
+  "verification": [
+    "Run bunx tsc --noEmit and confirm 0 errors",
+    "Run bun run build and confirm successful build"
+  ],
+  "blocked_reason": null,
+  "findings": "All 6 files updated successfully. TypeScript passes with 0 errors. Build succeeds in 8.89s. No pre-existing test issues encountered. The shimmer-skeleton class from FEAT-001 works correctly in FeedSkeleton."
+}

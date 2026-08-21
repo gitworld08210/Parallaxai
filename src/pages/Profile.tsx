@@ -44,8 +44,6 @@ import { OrgLogoCard } from "@/components/profile/OrgLogoCard";
 import { StickyTabs } from "@/components/profile/StickyTabs";
 import { VerificationSheet } from "@/components/profile/VerificationSheet";
 
-import { supabase } from "@/integrations/supabase/client";
-
 import { useAuth } from "@/contexts/AuthProvider";
 import { useUserOrganizations } from "@/hooks/organization/useUserOrganizations";
 import { toast } from "sonner";
@@ -316,7 +314,7 @@ const Profile = () => {
     return (
       <div className="pb-10">
         <div className="h-14 border-b border-border" />
-        <div className="h-56 sm:h-72 w-full bg-secondary/40 animate-pulse" />
+        <div className="h-44 sm:h-56 w-full bg-secondary/40 animate-pulse" />
         <div className="px-4 -mt-14 space-y-3">
           <div className="h-28 w-28 rounded-full bg-secondary animate-pulse ring-4 ring-background" />
           <div className="h-6 w-40 rounded bg-secondary animate-pulse" />
@@ -387,8 +385,8 @@ const Profile = () => {
 
   return (
     <div className="pb-24">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 h-14 px-4 flex items-center justify-between bg-black/80 backdrop-blur-xl border-b border-white/[0.05]">
+      {/* Top bar - glassmorphism */}
+      <header className="sticky top-0 z-30 h-14 px-4 flex items-center justify-between bg-background/85 backdrop-blur-xl border-b border-white/[0.05]">
         <div className="flex items-center gap-4">
           <button
             onClick={() => nav(-1)}
@@ -439,8 +437,8 @@ const Profile = () => {
         </div>
       </header>
 
-      {/* Cover */}
-      <div className="relative w-full h-32 sm:h-44 bg-secondary overflow-hidden group">
+      {/* Cover - taller with gradient overlay */}
+      <div className="relative w-full h-44 sm:h-56 bg-secondary overflow-hidden group">
         <button
           type="button"
           onClick={() => profile.cover_url && setCoverPreviewOpen(true)}
@@ -457,6 +455,8 @@ const Profile = () => {
             />
           )}
         </button>
+        {/* Gradient overlay for text readability */}
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background/80 to-transparent pointer-events-none" />
         {isMe && (
           <Link
             to="/profile/edit"
@@ -508,17 +508,17 @@ const Profile = () => {
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", stiffness: 300, damping: 24 }}
-            className="relative rounded-full ring-2 ring-background bg-background -mt-16 z-10"
+            className="relative rounded-full ring-4 ring-background bg-background -mt-16 z-10 shadow-lg"
           >
             {profile.avatar_url ? (
               <img
                 src={profile.avatar_url}
                 alt={displayName}
-                className="h-24 w-24 rounded-full object-cover"
+                className="h-28 w-28 rounded-full object-cover"
               />
             ) : (
               <div
-                className="h-24 w-24 rounded-full grid place-items-center text-xl font-display font-semibold text-foreground"
+                className="h-28 w-28 rounded-full grid place-items-center text-2xl font-display font-semibold text-foreground"
                 style={{ backgroundImage: gradientFor(profile.username) }}
               >
                 {initialsOf(displayName)}
@@ -538,14 +538,14 @@ const Profile = () => {
                 {(profile as any)?.is_creator && (
                   <Link
                     to="/creator/studio"
-                    className="inline-flex items-center gap-1.5 h-9 px-4 rounded-full bg-gradient-primary text-primary-foreground text-sm font-semibold shadow-glow hover:brightness-110 active:scale-95 transition-all"
+                    className="inline-flex items-center gap-1.5 h-11 px-4 rounded-2xl bg-gradient-primary text-primary-foreground text-sm font-semibold shadow-glow hover:brightness-110 active:scale-95 transition-all"
                   >
                     <Sparkles className="h-4 w-4" /> Studio
                   </Link>
                 )}
                 <Link
                   to="/profile/edit"
-                  className="inline-flex items-center h-9 px-4 rounded-full border border-border bg-background text-sm font-semibold hover:bg-secondary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 duration-fast"
+                  className="inline-flex items-center h-11 px-4 rounded-2xl border border-border bg-background text-sm font-semibold hover:bg-secondary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 duration-fast"
                 >
                   Edit profile
                 </Link>
@@ -557,7 +557,7 @@ const Profile = () => {
                     <DropdownMenuTrigger asChild>
                       <button
                         aria-label="More actions"
-                        className="grid place-items-center h-9 w-9 rounded-full border border-border bg-background hover:bg-secondary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+                        className="grid place-items-center h-11 w-11 rounded-2xl border border-border bg-background hover:bg-secondary/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
                       >
                         <MoreHorizontal className="h-4 w-4" />
                       </button>
@@ -586,7 +586,7 @@ const Profile = () => {
                   onClick={toggleFollow}
                   aria-pressed={isFollowing}
                   className={cn(
-                    "inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-sm font-semibold transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
+                    "inline-flex items-center gap-1.5 h-11 px-4 rounded-2xl text-sm font-semibold transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95",
                     isFollowing
                       ? "bg-background text-foreground border border-border hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 group"
                       : "bg-foreground text-background hover:opacity-90",
@@ -612,7 +612,7 @@ const Profile = () => {
         </div>
 
         {/* Identity */}
-        <div className="mt-3 space-y-2">
+        <div className="mt-4 space-y-4">
           <div className="flex items-center gap-1.5 flex-wrap">
             <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight leading-tight">
               {displayName}
@@ -627,7 +627,7 @@ const Profile = () => {
                 <VerificationBadge kind={profile.verification_kind} className="h-5 w-5" />
               </button>
             )}
-            {/* Affiliation chip — X-style, opens verification sheet */}
+            {/* Affiliation chip */}
             {memberships.filter((m) => m.verified).slice(0, 1).map((m) => (
               <button
                 key={m.id}
@@ -645,14 +645,14 @@ const Profile = () => {
               </button>
             ))}
           </div>
-          <p className="text-sm text-muted-foreground -mt-1">@{profile.username}</p>
+          <p className="text-sm text-muted-foreground -mt-2">@{profile.username}</p>
 
           {profile.bio && (
-            <p className="text-[15px] leading-snug whitespace-pre-wrap pt-1">{profile.bio}</p>
+            <p className="text-base leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
           )}
 
           {(locationRaw || websiteHref || joined) && (
-            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground pt-1">
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
               {locationRaw && (
                 <span className="inline-flex items-center gap-1.5">
                   <MapPin className="h-3.5 w-3.5" />
@@ -680,9 +680,8 @@ const Profile = () => {
           )}
 
           {/* Affiliated organizations */}
-          {/* Affiliated organizations */}
           {memberships.length > 0 && (
-            <div className="pt-2">
+            <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground pb-1.5">
                 Affiliated with ({memberships.length})
               </p>
@@ -694,23 +693,26 @@ const Profile = () => {
             </div>
           )}
 
-          {/* Stats row */}
-          <div className="flex items-center gap-5 pt-2 text-[13px]">
-            <Link to={`/u/${profile.username}/followers`} className="hover:underline">
-              <span className="font-bold text-foreground">{fmt(profile.followers_count ?? 0)}</span>{" "}
-              <span className="text-muted-foreground">Followers</span>
+          {/* Stats row - larger numbers with visual hierarchy and dividers */}
+          <div className="flex items-center gap-0 pt-2 overflow-x-auto no-scrollbar">
+            <Link to={`/u/${profile.username}/followers`} className="hover:underline pr-5 min-w-0 shrink-0">
+              <span className="text-lg font-bold text-foreground block leading-tight">{fmt(profile.followers_count ?? 0)}</span>
+              <span className="text-xs text-muted-foreground">Followers</span>
             </Link>
-            <Link to={`/u/${profile.username}/following`} className="hover:underline">
-              <span className="font-bold text-foreground">{fmt(profile.following_count ?? 0)}</span>{" "}
-              <span className="text-muted-foreground">Following</span>
+            <div className="h-8 w-px bg-border shrink-0" />
+            <Link to={`/u/${profile.username}/following`} className="hover:underline px-5 min-w-0 shrink-0">
+              <span className="text-lg font-bold text-foreground block leading-tight">{fmt(profile.following_count ?? 0)}</span>
+              <span className="text-xs text-muted-foreground">Following</span>
             </Link>
-            <button onClick={() => setTab("posts")} className="hover:underline">
-              <span className="font-bold text-foreground">{fmt(profile.posts_count ?? 0)}</span>{" "}
-              <span className="text-muted-foreground">Posts</span>
+            <div className="h-8 w-px bg-border shrink-0" />
+            <button onClick={() => setTab("posts")} className="hover:underline px-5 min-w-0 shrink-0">
+              <span className="text-lg font-bold text-foreground block leading-tight">{fmt(profile.posts_count ?? 0)}</span>
+              <span className="text-xs text-muted-foreground">Posts</span>
             </button>
-            <button onClick={() => setTab("organizations")} className="hover:underline">
-              <span className="font-bold text-foreground">{fmt(memberships.length)}</span>{" "}
-              <span className="text-muted-foreground">Orgs</span>
+            <div className="h-8 w-px bg-border shrink-0" />
+            <button onClick={() => setTab("organizations")} className="hover:underline pl-5 min-w-0 shrink-0">
+              <span className="text-lg font-bold text-foreground block leading-tight">{fmt(memberships.length)}</span>
+              <span className="text-xs text-muted-foreground">Orgs</span>
             </button>
           </div>
 
@@ -720,14 +722,14 @@ const Profile = () => {
               <button
                 type="button"
                 onClick={() => setBecomeOpen(true)}
-                className="w-full h-11 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:brightness-110 transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
+                className="w-full h-11 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:brightness-110 transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
               >
                 Become a creator
               </button>
             ) : isMe ? (
               <Link
                 to="/profile/edit"
-                className="w-full h-11 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:brightness-110 transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] inline-flex items-center justify-center"
+                className="w-full h-11 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:brightness-110 transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] inline-flex items-center justify-center"
               >
                 Edit profile
               </Link>
@@ -735,7 +737,7 @@ const Profile = () => {
               <button
                 type="button"
                 onClick={isFollowing ? openDM : toggleFollow}
-                className="w-full h-11 rounded-full bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:brightness-110 transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
+                className="w-full h-11 rounded-2xl bg-primary text-primary-foreground text-sm font-semibold shadow-md hover:brightness-110 transition-all duration-fast ease-out-expo focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98]"
               >
                 {isFollowing ? "Send a message" : `Follow @${profile.username}`}
               </button>

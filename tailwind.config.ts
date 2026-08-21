@@ -10,6 +10,7 @@ export default {
       fontFamily: {
         display: ['Inter', "system-ui", "sans-serif"],
         sans: ['Inter', "system-ui", "sans-serif"],
+        serif: ['Playfair Display', 'Georgia', 'serif'],
       },
 
       colors: {

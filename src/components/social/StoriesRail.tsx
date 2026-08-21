@@ -61,9 +61,9 @@ export const StoriesRail = () => {
 
   return (
     <>
-      <div className="px-3 py-3 flex gap-4 overflow-x-auto no-scrollbar border-b border-border">
-        <Link to="/compose/story" className="flex flex-col items-center gap-1 shrink-0 w-16">
-          <div className="relative h-16 w-16 rounded-full bg-muted grid place-items-center overflow-hidden border border-border">
+      <div className="px-3 py-4 flex gap-4 overflow-x-auto no-scrollbar border-b border-border">
+        <Link to="/compose/story" className="flex flex-col items-center gap-1.5 shrink-0 w-[72px]">
+          <div className="relative h-[68px] w-[68px] rounded-full bg-muted grid place-items-center overflow-hidden border border-border">
             {me?.avatar_url ? (
               <img src={me.avatar_url} className="h-full w-full object-cover" alt="" />
             ) : (
@@ -71,7 +71,7 @@ export const StoriesRail = () => {
                 {initialsOf(me?.display_name || me?.username || "Y")}
               </div>
             )}
-            <span className="absolute bottom-0 right-0 h-5 w-5 rounded-full bg-primary grid place-items-center ring-2 ring-background">
+            <span className="absolute bottom-0 right-0 h-5 w-5 rounded-full bg-primary grid place-items-center ring-2 ring-background shadow-lg shadow-primary/30">
               <Plus className="h-3 w-3 text-primary-foreground" strokeWidth={3} />
             </span>
           </div>
@@ -87,7 +87,7 @@ export const StoriesRail = () => {
             <button
               key={g.user_id}
               onClick={() => setViewingIdx(startIdx)}
-              className="flex flex-col items-center gap-1 shrink-0 w-16"
+              className="flex flex-col items-center gap-1.5 shrink-0 w-[72px]"
             >
               <StoryRing
                 avatarUrl={g.profile?.avatar_url || null}
