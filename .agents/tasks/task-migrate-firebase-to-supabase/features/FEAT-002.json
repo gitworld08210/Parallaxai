@@ -2,7 +2,7 @@
   "id": "FEAT-002",
   "type": "feat",
   "description": "Migrate AuthProvider from Firebase Auth to Supabase Auth. Replace all Firebase authentication (email/password sign-up/sign-in, Google OAuth, onAuthStateChanged, token refresh) with Supabase equivalents (supabase.auth.signUp, supabase.auth.signInWithPassword, supabase.auth.signInWithOAuth for Google, supabase.auth.onAuthStateChange). Update Auth.tsx page, AccountSwitcherSheet.tsx, multiAccount.ts, and any other files using Firebase Auth directly.",
-  "status": "pending",
+  "status": "completed",
   "steps": [
     "Rewrite src/contexts/AuthProvider.tsx: Replace Firebase onAuthStateChanged with supabase.auth.onAuthStateChange. Replace firebaseSignOut with supabase.auth.signOut. Replace createUserWithEmailAndPassword with supabase.auth.signUp. Replace signInWithEmailAndPassword with supabase.auth.signInWithPassword. Remove Firebase token refresh logic. Map Supabase user to the existing User/Profile types. Keep createProfileInSupabase and profile hydration logic intact.",
     "Rewrite src/pages/Auth.tsx: Replace signInWithEmailAndPassword(auth, ...) with supabase.auth.signInWithPassword. Replace createUserWithEmailAndPassword(auth, ...) with supabase.auth.signUp. Replace signInWithPopup(auth, googleProvider) with supabase.auth.signInWithOAuth({ provider: 'google' }). Replace profile reads from Firestore doc(db, 'profiles', uid) with supabase.from('profiles').select('*').eq('user_id', uid). Replace profile writes (setDoc to Firestore 'profiles') with supabase.from('profiles').upsert(...). Remove the Firestore 'usernames' collection writes (consolidate into profiles table).",
@@ -27,5 +27,5 @@
     "Run 'bun run test -- --run' and confirm tests pass"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "All 5 files migrated successfully. TypeScript check passes with 0 errors. Build succeeds. All 33 tests pass. The test runner still exits with code 1 due to the pre-existing tinypool cleanup issue (same as FEAT-001). Firebase auth bundle still exists in the build output because other files (e.g. firebase.ts, other pages) still import firebase/auth - these will be cleaned up in later features. Google OAuth now uses redirect-based flow via signInWithOAuth instead of the popup-based signInWithPopup."
 }
