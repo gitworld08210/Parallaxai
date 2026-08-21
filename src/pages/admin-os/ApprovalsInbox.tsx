@@ -97,6 +97,10 @@ const ApprovalsInbox = () => {
       if (topupErr) throw topupErr;
 
       // 2. Get current balance
+      // TODO: Profile coin_balance credit is not atomic under concurrency.
+      // If two topups for the same user are approved simultaneously, one credit could be lost.
+      // This needs a server-side RPC: UPDATE profiles SET coin_balance = coin_balance + $amount
+      // WHERE user_id = $recipient RETURNING coin_balance
       const { data: profileData, error: profileFetchErr } = await supabase
         .from('profiles')
         .select('coin_balance')

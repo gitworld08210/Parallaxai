@@ -969,6 +969,8 @@ export type Database = {
           conversation_id: string;
           sender_id: string;
           content: string;
+          media_url: string | null;
+          media_type: string | null;
           created_at: string;
         };
         Insert: {
@@ -976,6 +978,8 @@ export type Database = {
           conversation_id: string;
           sender_id: string;
           content: string;
+          media_url?: string | null;
+          media_type?: string | null;
           created_at?: string;
         };
         Update: {
@@ -983,6 +987,8 @@ export type Database = {
           conversation_id?: string;
           sender_id?: string;
           content?: string;
+          media_url?: string | null;
+          media_type?: string | null;
           created_at?: string;
         };
       };
@@ -1554,3 +1560,16 @@ export type Database = {
     };
   };
 };
+
+// TODO: The following tables still lack type definitions and use `as any` casts
+// when accessed via supabase.from(). They should be added in a future type-generation pass:
+// - close_friends
+// - post_collaborators
+// - platform_settings
+// - sup_tickets
+// - login_events
+// - engagement_events
+// - platform_activity
+// - message_passcodes
+// - story_sticker_responses
+// - organization_settings

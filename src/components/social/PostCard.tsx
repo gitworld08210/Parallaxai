@@ -144,9 +144,14 @@ export const PostCard = ({ post, onOpenComments }: { post: FeedPost; onOpenComme
           post_id: post.id,
           created_at: new Date().toISOString(),
         });
+        // TODO: like_count update uses local state (`likes`) as the base value.
+        // Under concurrency, two users liking simultaneously will both read the same count
+        // and one increment is lost. Same class as view_count - needs server-side RPC:
+        // supabase.rpc('increment_like_count', { post_id: post.id, delta: 1 })
         await supabase.from('posts').update({ like_count: likes + 1 }).eq('id', post.id);
       } else {
         await supabase.from('likes').delete().eq('id', likeId);
+        // TODO: Same stale-read issue as above for decrements.
         await supabase.from('posts').update({ like_count: likes - 1 }).eq('id', post.id);
       }
     } catch (error: any) {

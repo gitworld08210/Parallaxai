@@ -206,6 +206,8 @@ const Conversation = () => {
       conversation_id: id,
       sender_id: user.id,
       content: "",
+      media_url: mediaUrl,
+      media_type: "audio",
     } as any);
 
     await supabase.from('conversations').update({

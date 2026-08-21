@@ -73,6 +73,19 @@ const Messages = () => {
       .contains('member_ids', [user.id])
       .order('last_message_at', { ascending: false });
 
+    // Fetch unread counts from the dedicated unread_counts table
+    const { data: unreadData } = await supabase
+      .from('unread_counts')
+      .select('conversation_id, count')
+      .eq('user_id', user.id);
+
+    const unreadMap: Record<string, number> = {};
+    if (unreadData) {
+      for (const row of unreadData) {
+        unreadMap[row.conversation_id] = row.count;
+      }
+    }
+
     if (data) {
       setConvs((data as any[]).map((d: any) => ({
         id: d.id,
@@ -84,7 +97,7 @@ const Messages = () => {
         last: d.last_message_text || null,
         last_sender_id: d.last_sender_id || null,
         last_read: !!d.last_read,
-        unread: d.unread_counts?.[user.id] || 0,
+        unread: unreadMap[d.id] || 0,
       })));
     }
     setLoading(false);

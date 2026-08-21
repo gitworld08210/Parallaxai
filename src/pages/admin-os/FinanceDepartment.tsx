@@ -63,6 +63,10 @@ const FinanceDepartment = () => {
       }).eq('id', req.id);
 
       // Credit wallet
+      // TODO: Recipient wallet credit is not atomic under concurrency. If two approvals
+      // for the same user happen simultaneously, one credit could be lost.
+      // This needs a server-side RPC: UPDATE wallets SET total = total + $amount
+      // WHERE user_id = $recipient RETURNING total
       const { data: wallet } = await supabase.from('wallets').select('total').eq('user_id', req.user_id).maybeSingle();
       if (wallet) {
         await supabase.from('wallets').update({ total: wallet.total + req.coins }).eq('user_id', req.user_id);

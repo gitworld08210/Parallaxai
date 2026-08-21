@@ -54,6 +54,10 @@ export function useTipSend() {
       }
 
       // 3. Credit to recipient (upsert)
+      // TODO: Recipient credit is not atomic under concurrency. Two simultaneous tips
+      // to the same recipient both read the same balance and one credit is lost.
+      // This needs a server-side RPC: UPDATE wallets SET total = total + $amount
+      // WHERE user_id = $recipient RETURNING total
       const { data: recipientWallet } = await supabase
         .from('wallets')
         .select('total')

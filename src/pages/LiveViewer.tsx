@@ -226,6 +226,10 @@ export default function LiveViewer() {
         throw new Error("Insufficient coins (concurrent modification)");
       }
       // Credit host
+      // TODO: Recipient (host) credit is not atomic under concurrency. Two simultaneous
+      // ticket purchases could both read the same balance, losing one credit.
+      // This needs a server-side RPC: UPDATE wallets SET total = total + $amount
+      // WHERE user_id = $recipient RETURNING total
       const { data: hostWallet } = await supabase.from('wallets').select('total').eq('user_id', stream.host_id).maybeSingle();
       if (hostWallet) {
         await supabase.from('wallets').update({ total: hostWallet.total + stream.ticket_price_coins }).eq('user_id', stream.host_id);
@@ -275,6 +279,10 @@ export default function LiveViewer() {
         throw new Error("Insufficient coins (concurrent modification)");
       }
       // Credit host
+      // TODO: Recipient (host) credit is not atomic under concurrency. Two simultaneous
+      // gifts could both read the same balance, losing one credit.
+      // This needs a server-side RPC: UPDATE wallets SET total = total + $amount
+      // WHERE user_id = $recipient RETURNING total
       const { data: hostWallet } = await supabase.from('wallets').select('total').eq('user_id', stream.host_id).maybeSingle();
       if (hostWallet) {
         await supabase.from('wallets').update({ total: hostWallet.total + g.cost_coins }).eq('user_id', stream.host_id);
@@ -290,6 +298,10 @@ export default function LiveViewer() {
         created_at: new Date().toISOString(),
       });
       // Increment stream total_gifts
+      // TODO: total_gifts update uses local state (stream.total_gifts) as the base value.
+      // Under concurrency, two viewers sending gifts simultaneously will both read the same
+      // value and one increment is lost. Same class as view_count - needs server-side RPC:
+      // supabase.rpc('increment_total_gifts', { stream_id, amount: g.cost_coins })
       await supabase.from('live_streams').update({ total_gifts: (stream.total_gifts || 0) + g.cost_coins }).eq('id', stream.id);
 
       // Local animation
