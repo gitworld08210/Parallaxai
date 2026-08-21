@@ -2,7 +2,7 @@
   "id": "FEAT-004",
   "type": "feat",
   "description": "Migrate remaining Firebase-dependent files: admin panels, CallProvider, push notifications, error reporting, platform services. Replace Firebase Storage with Cloudinary for avatar upload. Remove Firebase dependencies entirely.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "Migrate src/services/platform/platform.ts: Remove Firestore import and addDoc for admin_audit_logs. The function already writes to Supabase as secondary - make that the only write. Remove all firebase/firestore imports.",
     "Migrate src/hooks/usePushNotifications.ts: Replace Firestore setDoc to push_tokens with supabase.from('push_tokens').upsert(). Remove firebase/firestore and @/lib/firebase imports.",
@@ -36,5 +36,5 @@
     "Run 'bun run test -- --run' and confirm tests pass"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Many more files than originally listed in the feature steps still had firebase imports (Messages, Conversation, Profile, Drafts, LiveHost, LiveList, LiveViewer, Compose, StoryCompose, Onboarding, EditProfile, ReelCompose, Support, Verification, VirtualWorld, RecruitmentCenter, FinanceDepartment, useVirtualWorld, useWalletOS, organization.service, Assistant, ForgotPassword, ResetPassword, DeleteAccountScreen, integrations/firebase/client). All were successfully migrated. TypeScript check passes. Build succeeds. The 1 actual test passes. The 7 vitest/bun internal errors are pre-existing (documented in FEAT-003 findings)."
 }
